@@ -9,12 +9,13 @@ import log from './log';
 import { initSchemaRegistry, setEncodeSchema } from './kafka/schema-registry';
 import { injectEnvVars } from './inject-env';
 import './on-start-app';
+import { APP_NAME } from './constants';
 
 const fastify = Fastify();
 
 fastify.get('/', async (_, reply) => {
   reply.type('application/json').code(200)
-  return { hello: 'From loadmill-kafka-client' };
+  return { hello: `From ${APP_NAME}` };
 });
 
 fastify.post('/subscribe', {

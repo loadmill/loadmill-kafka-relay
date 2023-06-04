@@ -4,9 +4,10 @@ import { initSchemaRegistry } from './kafka/schema-registry';
 import { startCloseOldConnectionsInterval } from './kafka/connections';
 import { RegistryOptions } from './types';
 import log from './log';
+import { APP_NAME } from './constants';
 
 
-log.info('Starting loadmill-kafka-client');
+log.info(`Starting ${APP_NAME}`);
 
 log.info('Loading environment variables');
 config();

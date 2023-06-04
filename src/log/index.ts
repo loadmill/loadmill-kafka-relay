@@ -1,4 +1,5 @@
 import { createLogger, format, transports } from 'winston';
+import { APP_NAME } from '../constants';
 
 const { combine, timestamp, printf, colorize } = format;
 
@@ -24,7 +25,7 @@ const log = createLogger({
       level: 'debug',
     }),
     new transports.File({
-      filename: 'loadmill-kafka-client.log',
+      filename: `${APP_NAME}.log`,
       format: combine(
         timestampFormat,
         logFormat,
