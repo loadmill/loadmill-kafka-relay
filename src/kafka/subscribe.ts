@@ -2,8 +2,8 @@ import { randomUUID } from 'crypto';
 import { Kafka } from 'kafkajs';
 
 
+import { APP_NAME } from '../constants';
 import { SubscribeOptions } from '../types';
-import log from '../log';
 
 import { connections } from './connections';
 import { prepareBrokers } from './brokers';
@@ -12,7 +12,7 @@ import { decode } from './schema-registry';
 export const subscribe = async ({ brokers, sasl, ssl, topic }: SubscribeOptions): Promise<{ id: string }> => {
   const kafka = new Kafka({
     brokers: prepareBrokers(brokers),
-    clientId: 'loadmill-kafka-client',
+    clientId: APP_NAME,
     sasl,
     ssl,
   });

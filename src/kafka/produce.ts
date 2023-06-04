@@ -1,11 +1,12 @@
 import { Kafka, Partitioners, RecordMetadata } from "kafkajs";
+import { APP_NAME } from "../constants";
 import { ProduceOptions } from "../types";
 import { prepareBrokers } from "./brokers";
 import { encode } from "./schema-registry";
 
 export const produceMessage = async ({ brokers, topic, message, sasl, ssl }: ProduceOptions): Promise<RecordMetadata> => {
   const kafka = new Kafka({
-    clientId: 'loadmill-kafka-client',
+    clientId: APP_NAME,
     brokers: prepareBrokers(brokers),
     sasl,
     ssl,

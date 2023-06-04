@@ -3,5 +3,6 @@ node_modules/
 .env
 .notes.txt
 loadmill-kafka-client.log
+loadmill-kafka-relay.log
 .vscode/
 .yarn-error.log
