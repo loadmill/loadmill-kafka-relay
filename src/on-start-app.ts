@@ -3,6 +3,8 @@ import { config } from 'dotenv';
 import { initSchemaRegistry } from './kafka/schema-registry';
 import { startCloseOldConnectionsInterval } from './kafka/connections';
 import { RegistryOptions } from './types';
+import { CompressionTypes, CompressionCodecs } from 'kafkajs'
+import LZ4 from 'kafkajs-lz4'
 import log from './log';
 import { APP_NAME } from './constants';
 
@@ -14,6 +16,10 @@ config();
 
 log.info('Starting close old connections interval');
 startCloseOldConnectionsInterval();
+
+if (process.env.LOADMILL_KAFKA_LZ4_COMPRESSION_CODEC) {
+  CompressionCodecs[CompressionTypes.LZ4] = new LZ4().codec
+}
 
 if (process.env.LOADMILL_KAFKA_SCHEMA_REGISTRY_URL) {
   const schemaRegistry: RegistryOptions = {

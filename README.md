@@ -126,6 +126,12 @@ Example Request 2 (using a regex filter):
 GET /consume/c8bf8b9b-5bb6-4f17-babd-3d027eb7ad55?filter=myregex
 ```
 
+#### Compression codecs
+To turn on LZ4 compression codec encoding on message consuming add the following environemt variable:
+```bash
+LOADMILL_KAFKA_LZ4_COMPRESSION_CODEC='true'
+```
+
 ### Advanced Usage
 
 ### Produce a Message
