@@ -10,6 +10,7 @@ import { initSchemaRegistry, setEncodeSchema } from './kafka/schema-registry';
 import { injectEnvVars } from './inject-env';
 import './on-start-app';
 import { APP_NAME } from './constants';
+import { getConnection } from './kafka/connections';
 
 const fastify = Fastify();
 
@@ -29,8 +30,22 @@ fastify.post('/subscribe', {
 });
 
 fastify.get('/consume/:id', { schema: consumeValidationSchema }, async (request, reply) => {
-  const consumeOptions = request.params as ConsumeOptions;
-  const message = await consume(consumeOptions);
+  const consumeOptions = {
+    id: (request.params as { id: string }).id,
+    regexFilter: (request.query as { filter?: string }).filter,
+  } as ConsumeOptions;
+
+  if (!getConnection(consumeOptions.id)) {
+    reply.type('application/json').code(404);
+    return { error: `No connection found for id ${consumeOptions.id}` };
+  }
+  const consumedMsg = await consume(consumeOptions);
+  let message;
+  try {
+    message = JSON.parse(consumedMsg);
+  } catch (e) {
+    message = consumedMsg;
+  }
   reply.type('application/json').code(200);
   return { message };
 });

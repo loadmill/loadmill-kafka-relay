@@ -65,9 +65,11 @@ export const consumeValidationSchema: FastifySchema = {
     type: 'object',
     properties: {
       id: { type: 'string', format: 'uuid' },
-      regexFilter: { type: 'string', format: 'regex' },
     },
     required: ['id'],
+  },
+  querystring: {
+    filter: { type: 'string', format: 'regex' },
   },
 };
 

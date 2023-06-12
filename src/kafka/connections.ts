@@ -30,4 +30,7 @@ export const addConnection = (id: string, consumer: Consumer, topic: string) => 
     timeOfSubscription: Date.now(),
     topic,
   };
+  return connections[id];
 }
+
+export const getConnection = (id: string) => connections[id];

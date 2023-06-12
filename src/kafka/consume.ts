@@ -1,13 +1,12 @@
-import log from '../log';
 import { ConsumeOptions, Subscriber } from '../types';
-import { connections } from './connections';
+import { getConnection } from './connections';
 
 const SECOND_MS = 1000;
 const MAX_QUERY_TIME_MS = 25 * SECOND_MS;
 const WAIT_INTERVAL_MS = 2 * SECOND_MS;
 
 export const consume = async ({ id, regexFilter }: ConsumeOptions): Promise<string> => {
-  const res = await getMessageOrTimeout(connections[id].messages, regexFilter);
+  const res = await getMessageOrTimeout(getConnection(id).messages, regexFilter);
   if (!res) {
     throw new Error('No messages found');
   }
