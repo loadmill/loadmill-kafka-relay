@@ -5,20 +5,33 @@ const SECOND_MS = 1000;
 const MAX_QUERY_TIME_MS = 25 * SECOND_MS;
 const WAIT_INTERVAL_MS = 2 * SECOND_MS;
 
-export const consume = async ({ id, regexFilter }: ConsumeOptions): Promise<string> => {
-  const res = await getMessageOrTimeout(getConnection(id).messages, regexFilter);
+export const consume = async ({ id, regexFilter, timeout }: ConsumeOptions): Promise<string> => {
+  const res = await getMessageOrTimeout(
+    getConnection(id).messages,
+    {
+      regexFilter,
+      timeout,
+    },
+  );
   if (!res) {
     throw new Error('No messages found');
   }
   return res;
 }
 
-const getMessageOrTimeout = async (messages: string[], regexFilter?: string): Promise<string | undefined> => {
+const getMessageOrTimeout = async (
+  messages: string[],
+  {
+    regexFilter,
+    timeout,
+  }: MessageOrTimeoutOptions,
+): Promise<string | undefined> => {
   const startTime = Date.now();
   let res;
   let elapsedTime = 0;
+  const timeoutMs = timeout ? timeout * SECOND_MS : MAX_QUERY_TIME_MS;
 
-  while (!res && elapsedTime < MAX_QUERY_TIME_MS) {
+  while (!res && elapsedTime < timeoutMs) {
     res = findMessageByRegex(messages, regexFilter);
     if (res) {
       break;
@@ -29,6 +42,8 @@ const getMessageOrTimeout = async (messages: string[], regexFilter?: string): Pr
   }
   return res;
 }
+
+type MessageOrTimeoutOptions = Pick<ConsumeOptions, 'regexFilter' | 'timeout'>;
 
 const findMessageByRegex = (messages: string[], regexFilter?: string): string | undefined => {
   if (regexFilter) {

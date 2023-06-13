@@ -70,6 +70,7 @@ export const consumeValidationSchema: FastifySchema = {
   },
   querystring: {
     filter: { type: 'string', format: 'regex' },
+    timeout: { type: 'number', minimum: 5, maximum: 30 },
   },
 };
 
