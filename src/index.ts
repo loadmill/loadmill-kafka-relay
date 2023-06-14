@@ -33,6 +33,7 @@ fastify.get('/consume/:id', { schema: consumeValidationSchema }, async (request,
   const consumeOptions = {
     id: (request.params as { id: string }).id,
     regexFilter: (request.query as { filter?: string }).filter,
+    timeout: (request.query as { timeout?: number }).timeout,
   } as ConsumeOptions;
 
   if (!getConnection(consumeOptions.id)) {

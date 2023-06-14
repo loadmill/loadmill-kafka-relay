@@ -25,6 +25,7 @@ export type SubscribeOptions = Pick<KafkaConfig, 'sasl' | 'ssl'> & {
 export type ConsumeOptions = {
   id: UUID;
   regexFilter?: string;
+  timeout?: number; /** in seconds */
 };
 
 export type RegistryOptions = {
