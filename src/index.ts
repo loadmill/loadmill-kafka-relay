@@ -1,5 +1,4 @@
 import Fastify from 'fastify';
-
 import { produceMessage } from './kafka/produce';
 import { subscribe } from './kafka/subscribe';
 import { consume } from './kafka/consume';
@@ -11,15 +10,19 @@ import { injectEnvVars } from './inject-env';
 import './on-start-app';
 import { APP_NAME } from './constants';
 import { getConnection } from './kafka/connections';
+import { compile } from './server-validation/compilation';
+import { serverErrorHandler } from './server-errors';
 
-const fastify = Fastify();
+const app = Fastify({
+  logger: log,
+});
 
-fastify.get('/', async (_, reply) => {
+app.get('/', async (_, reply) => {
   reply.type('application/json').code(200)
   return { hello: `From ${APP_NAME}` };
 });
 
-fastify.post('/subscribe', {
+app.post('/subscribe', {
   preValidation: injectEnvVars,
   schema: subscribeValidationSchema,
 }, async (request, reply) => {
@@ -29,7 +32,7 @@ fastify.post('/subscribe', {
   return { id };
 });
 
-fastify.get('/consume/:id', { schema: consumeValidationSchema }, async (request, reply) => {
+app.get('/consume/:id', { schema: consumeValidationSchema }, async (request, reply) => {
   const consumeOptions = {
     id: (request.params as { id: string }).id,
     regexFilter: (request.query as { filter?: string }).filter,
@@ -51,7 +54,7 @@ fastify.get('/consume/:id', { schema: consumeValidationSchema }, async (request,
   return { message };
 });
 
-fastify.post('/produce', {
+app.post('/produce', {
   preValidation: injectEnvVars,
   schema: produceValidationSchema,
 }, async (request, reply) => {
@@ -61,7 +64,7 @@ fastify.post('/produce', {
   return recordMetaData;
 });
 
-fastify.post('/registry', {
+app.post('/registry', {
   preValidation: injectEnvVars,
   schema: registryValidationSchema,
 }, async (request, reply) => {
@@ -71,7 +74,7 @@ fastify.post('/registry', {
   return { message };
 });
 
-fastify.put('/registry/encode', {
+app.put('/registry/encode', {
   preValidation: injectEnvVars,
   schema: encodeValidationSchema,
 }, async (request, reply) => {
@@ -81,12 +84,11 @@ fastify.put('/registry/encode', {
   return { message: 'Schema registry encode schema set successfully' };
 });
 
-fastify.listen({
+app.setValidatorCompiler(compile);
+
+app.setErrorHandler(serverErrorHandler);
+
+app.listen({
   host: '0.0.0.0',
   port: Number(process.env.LOADMILL_KAFKA_SERVER_PORT) || 3000,
-}, (err, address) => {
-  if (err){
-    throw err;
-  }
-  log.info(`Server listening on ${address}`);
 });

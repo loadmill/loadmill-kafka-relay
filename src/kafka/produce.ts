@@ -3,6 +3,7 @@ import { APP_NAME } from "../constants";
 import { ProduceOptions } from "../types";
 import { prepareBrokers } from "./brokers";
 import { encode } from "./schema-registry";
+import { kafkaLogCreator } from "./log-creator";
 
 export const produceMessage = async ({ brokers, topic, message, sasl, ssl }: ProduceOptions): Promise<RecordMetadata> => {
   const kafka = new Kafka({
@@ -10,6 +11,7 @@ export const produceMessage = async ({ brokers, topic, message, sasl, ssl }: Pro
     brokers: prepareBrokers(brokers),
     sasl,
     ssl,
+    logCreator: kafkaLogCreator,
   });
   const producer = kafka.producer({
     createPartitioner: Partitioners.LegacyPartitioner,

@@ -1,4 +1,5 @@
-import { ConsumeOptions, Subscriber } from '../types';
+import { ClientError } from '../errors';
+import { ConsumeOptions } from '../types';
 import { getConnection } from './connections';
 
 const SECOND_MS = 1000;
@@ -14,7 +15,11 @@ export const consume = async ({ id, regexFilter, timeout }: ConsumeOptions): Pro
     },
   );
   if (!res) {
-    throw new Error('No messages found');
+    let msg = 'No message found. ';
+    msg += regexFilter ?
+      'Maybe your regex filter is too restrictive?' :
+      'Maybe the topic you provided is not spelled correctly?';
+    throw new ClientError(404, msg);
   }
   return res;
 }

@@ -8,6 +8,7 @@ import { SubscribeOptions } from '../types';
 import { addConnection } from './connections';
 import { prepareBrokers } from './brokers';
 import { decode } from './schema-registry';
+import { kafkaLogCreator } from './log-creator';
 
 export const subscribe = async ({ brokers, sasl, ssl, topic }: SubscribeOptions): Promise<{ id: string }> => {
   const kafka = new Kafka({
@@ -15,6 +16,7 @@ export const subscribe = async ({ brokers, sasl, ssl, topic }: SubscribeOptions)
     clientId: APP_NAME,
     sasl,
     ssl,
+    logCreator: kafkaLogCreator,
   });
   const id = randomUUID();
   const consumer = kafka.consumer({ groupId: id });
