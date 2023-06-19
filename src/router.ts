@@ -1,6 +1,7 @@
 import Fastify from 'fastify';
 
 import { APP_NAME } from './constants';
+import { ClientError } from './errors';
 import { injectEnvVars } from './inject-env';
 import { getConnection } from './kafka/connections';
 import { consume } from './kafka/consume';
@@ -46,8 +47,7 @@ app.get('/consume/:id', { schema: consumeValidationSchema }, async (request, rep
   } as ConsumeOptions;
 
   if (!getConnection(consumeOptions.id)) {
-    reply.type('application/json').code(404);
-    return { error: `No connection found for id ${consumeOptions.id}` };
+    throw new ClientError(404, `No connection found for id ${consumeOptions.id}`);
   }
   const consumedMsg = await consume(consumeOptions);
   let message;
