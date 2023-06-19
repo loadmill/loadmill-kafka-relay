@@ -1,31 +1,31 @@
-import { logCreator, logLevel, LoggerEntryContent } from 'kafkajs';
+import { logCreator, LoggerEntryContent, logLevel } from 'kafkajs';
 
 import log from '../../log';
 
-export const kafkaLogCreator: logCreator = (_logLevel) => {
+export const kafkaLogCreator: logCreator = () => {
   return ({ log: value, level }) => {
-    const msg = toLogMessage(value);
+    const msg = toKafkaLogString(value);
 
     switch (level) {
-    case logLevel.ERROR:
-      log.error(msg);
-      break;
-    case logLevel.WARN:
-      log.warn(msg);
-      break;
-    case logLevel.INFO:
-      log.info(msg);
-      break;
-    case logLevel.DEBUG:
-      log.debug(msg);
-      break;
-    default:
-      log.trace(msg);
-      break;
+      case logLevel.ERROR:
+        log.error(msg);
+        break;
+      case logLevel.WARN:
+        log.warn(msg);
+        break;
+      case logLevel.INFO:
+        log.info(msg);
+        break;
+      case logLevel.DEBUG:
+        log.debug(msg);
+        break;
+      default:
+        log.trace(msg);
+        break;
     }
   };
 };
 
-const toLogMessage = (value: LoggerEntryContent) => {
+const toKafkaLogString = (value: LoggerEntryContent) => {
   return `[KAFKA]: ${JSON.stringify(value)}`;
-}
+};

@@ -1,15 +1,25 @@
-import { FastifyError, FastifyReply, FastifyRequest } from "fastify";
-import { KafkaJSError } from "kafkajs";
+import { FastifyError, FastifyReply, FastifyRequest } from 'fastify';
+import { KafkaJSError } from 'kafkajs';
 
-import { ClientError } from "../errors";
+import { ClientError } from '../errors';
 
 type ErrorType = ClientError | FastifyError | KafkaJSError;
 
-export const serverErrorHandler = (error: ErrorType, request: FastifyRequest, reply: FastifyReply) => {
+type PresentableError = {
+  error: ErrorType & {
+    message: string;
+  };
+};
+
+export const serverErrorHandler = (
+  error: ErrorType,
+  request: FastifyRequest,
+  reply: FastifyReply
+): PresentableError => {
   const { log } = request;
   log.error(error);
-  reply.type("application/json");
-  let message = error.message || "¯\\_(ツ)_/¯ There was an error";
+  reply.type('application/json');
+  let message = error.message || '¯\\_(ツ)_/¯ There was an error';
 
   if (error instanceof ClientError) {
     reply.code(error.statusCode);
@@ -19,7 +29,7 @@ export const serverErrorHandler = (error: ErrorType, request: FastifyRequest, re
     message = error.message;
   } else if (!(error as FastifyError).statusCode) {
     reply.code(500);
-    message = "¯\\_(ツ)_/¯ Oops! Something went wrong";
+    message = '¯\\_(ツ)_/¯ Oops! Something went wrong';
   }
 
   return {
@@ -28,4 +38,4 @@ export const serverErrorHandler = (error: ErrorType, request: FastifyRequest, re
       message,
     },
   };
-}
+};

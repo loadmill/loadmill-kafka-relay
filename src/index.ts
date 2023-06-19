@@ -1,24 +1,31 @@
 import Fastify from 'fastify';
-import { produceMessage } from './kafka/produce';
-import { subscribe } from './kafka/subscribe';
-import { consume } from './kafka/consume';
-import { consumeValidationSchema, encodeValidationSchema, produceValidationSchema, registryValidationSchema, subscribeValidationSchema } from './server-validation';
-import { ConsumeOptions, EncodeSchemaOptions, ProduceOptions, RegistryOptions, SubscribeOptions } from './types';
-import log from './log';
-import { initSchemaRegistry, setEncodeSchema } from './kafka/schema-registry';
-import { injectEnvVars } from './inject-env';
-import './on-start-app';
+
 import { APP_NAME } from './constants';
+import { injectEnvVars } from './inject-env';
 import { getConnection } from './kafka/connections';
-import { compile } from './server-validation/compilation';
+import { consume } from './kafka/consume';
+import { produceMessage } from './kafka/produce';
+import { initSchemaRegistry, setEncodeSchema } from './kafka/schema-registry';
+import { subscribe } from './kafka/subscribe';
+import log from './log';
+import './on-start-app';
 import { serverErrorHandler } from './server-errors';
+import {
+  consumeValidationSchema,
+  encodeValidationSchema,
+  produceValidationSchema,
+  registryValidationSchema,
+  subscribeValidationSchema
+} from './server-validation';
+import { compile } from './server-validation/compilation';
+import { ConsumeOptions, EncodeSchemaOptions, ProduceOptions, RegistryOptions, SubscribeOptions } from './types';
 
 const app = Fastify({
   logger: log,
 });
 
 app.get('/', async (_, reply) => {
-  reply.type('application/json').code(200)
+  reply.type('application/json').code(200);
   return { hello: `From ${APP_NAME}` };
 });
 

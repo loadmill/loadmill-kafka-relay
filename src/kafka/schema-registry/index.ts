@@ -1,6 +1,7 @@
-import { SchemaRegistry } from "@kafkajs/confluent-schema-registry";
-import { EncodeSchemaOptions, RegistryOptions } from "../../types";
-import log from "../../log";
+import { SchemaRegistry } from '@kafkajs/confluent-schema-registry';
+
+import log from '../../log';
+import { EncodeSchemaOptions, RegistryOptions } from '../../types';
 
 let schemaRegistry: SchemaRegistry;
 let activeSchemaId: number;
@@ -10,7 +11,7 @@ export const initSchemaRegistry = async ({ url, auth, encode }: RegistryOptions)
   let message = 'Schema registry already initialized';
   if (url && url !== latestUrl) {
     message = `Initializing schema registry at ${url}`;
-    schemaRegistry = new SchemaRegistry({ host: url, auth });
+    schemaRegistry = new SchemaRegistry({ auth, host: url });
     log.info(message);
     latestUrl = url;
   }
@@ -34,7 +35,7 @@ export const setEncodeSchema = async (encodeSchemaOptions: EncodeSchemaOptions):
   log.info(`Active Schema id set to ${activeSchemaId}`);
 };
 
-export const decode = async (encodedValue: Buffer): Promise<any> => {
+export const decode = async (encodedValue: Buffer): Promise<string | undefined> => {
   return await schemaRegistry?.decode(encodedValue);
 };
 
@@ -46,4 +47,7 @@ export const encode = async (value: string | object): Promise<Buffer | undefined
 
 export const getActiveSchemaId = (): number => {
   return activeSchemaId;
+};
+export const asd = (): 'asd' => {
+  return 'asd';
 };

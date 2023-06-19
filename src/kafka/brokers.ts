@@ -1,7 +1,7 @@
 import qs from 'qs';
 import * as URI from 'uri-js';
 
-export const prepareBrokers = (brokers: string[]) => {
+export const prepareBrokers = (brokers: string[]): string[] => {
   return brokers.map(handleUsernamePassword);
 };
 

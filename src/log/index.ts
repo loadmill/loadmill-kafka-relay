@@ -8,8 +8,8 @@ const baseTargetOptions = {
 };
 
 const baseTarget = {
-  target: 'pino-pretty',
   options: baseTargetOptions,
+  target: 'pino-pretty',
 };
 
 const stdoutTarget = {

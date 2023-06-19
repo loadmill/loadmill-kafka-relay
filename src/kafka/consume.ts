@@ -1,5 +1,6 @@
 import { ClientError } from '../errors';
 import { ConsumeOptions } from '../types';
+
 import { getConnection } from './connections';
 
 const SECOND_MS = 1000;
@@ -22,7 +23,7 @@ export const consume = async ({ id, regexFilter, timeout }: ConsumeOptions): Pro
     throw new ClientError(404, msg);
   }
   return res;
-}
+};
 
 const getMessageOrTimeout = async (
   messages: string[],
@@ -46,7 +47,7 @@ const getMessageOrTimeout = async (
     elapsedTime = Date.now() - startTime;
   }
   return res;
-}
+};
 
 type MessageOrTimeoutOptions = Pick<ConsumeOptions, 'regexFilter' | 'timeout'>;
 
@@ -68,8 +69,8 @@ const getLatestMessage = (messages: string[]): string | undefined => {
   if (messages.length > 0) {
     return messages[messages.length - 1].toString();
   }
-}
+};
 
 const delay = (timeout: number): Promise<unknown> => {
   return new Promise(resolve => setTimeout(resolve, timeout));
-}
+};
