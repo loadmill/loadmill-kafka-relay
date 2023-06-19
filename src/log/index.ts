@@ -8,22 +8,25 @@ const baseTargetOptions = {
 };
 
 const baseTarget = {
+  level: process.env.LOG_LEVEL || 'info',
   options: baseTargetOptions,
   target: 'pino-pretty',
 };
 
 const stdoutTarget = {
   ...baseTarget,
-  level: 'debug',
   options: {
     ...baseTargetOptions,
     colorize: true,
   },
 };
 
+if (process.env.NODE_ENV === 'development') {
+  stdoutTarget.level = 'debug';
+}
+
 const fileTarget = {
   ...baseTarget,
-  level: 'info',
   options: {
     ...baseTargetOptions,
     colorize: false,
@@ -40,6 +43,8 @@ const transport = pino.transport({
   targets,
 });
 
-const log = pino({}, transport);
+const log = pino({
+  level: 'debug', // https://github.com/pinojs/pino/issues/1639#issuecomment-1418324692
+}, transport);
 
 export default log;

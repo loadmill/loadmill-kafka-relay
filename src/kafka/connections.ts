@@ -3,7 +3,7 @@ import { Consumer } from 'kafkajs';
 import log from '../log';
 import { Connections, Subscriber } from '../types';
 
-export const connections: Connections = {};
+const connections: Connections = {};
 
 const MAX_OPEN_CONNECTION_TIME_MS = 10 * 1000 * 60; // 10 minutes
 const CLOSE_CONNECTIONS_INTERVAL_MS = 1000 * 60; // 60 seconds

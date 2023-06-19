@@ -1,4 +1,5 @@
 import { ClientError } from '../errors';
+import log from '../log';
 import { ConsumeOptions } from '../types';
 
 import { getConnection } from './connections';
@@ -19,7 +20,7 @@ export const consume = async ({ id, regexFilter, timeout }: ConsumeOptions): Pro
     let msg = 'No message found. ';
     msg += regexFilter ?
       'Maybe your regex filter is too restrictive?' :
-      'Maybe the topic you provided is not spelled correctly?';
+      'Maybe the topic you provided when subscribing is not spelled correctly?';
     throw new ClientError(404, msg);
   }
   return res;
@@ -59,6 +60,7 @@ const findMessageByRegex = (messages: string[], regexFilter?: string): string | 
 };
 
 const filterMessages = (messages: string[], regexFilter: string) => {
+  log.debug({ messages, regexFilter }, 'Filtering messages by regex');
   const regex = new RegExp(regexFilter);
   const filteredMessages = messages.filter((message) => regex.test(message));
   messages = filteredMessages;

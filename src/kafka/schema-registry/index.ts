@@ -1,4 +1,6 @@
 import { SchemaRegistry } from '@kafkajs/confluent-schema-registry';
+import { CompressionCodecs, CompressionTypes } from 'kafkajs';
+import LZ4 from 'kafkajs-lz4';
 
 import log from '../../log';
 import { EncodeSchemaOptions, RegistryOptions } from '../../types';
@@ -6,6 +8,35 @@ import { EncodeSchemaOptions, RegistryOptions } from '../../types';
 let schemaRegistry: SchemaRegistry;
 let activeSchemaId: number;
 let latestUrl: string;
+
+export const handleKafkaRegistryEnvVars = (): void => {
+  if (process.env.LOADMILL_KAFKA_SCHEMA_REGISTRY_URL) {
+    const schemaRegistry: RegistryOptions = {
+      url: process.env.LOADMILL_KAFKA_SCHEMA_REGISTRY_URL,
+    };
+    if (process.env.LOADMILL_KAFKA_SCHEMA_REGISTRY_USERNAME && process.env.LOADMILL_KAFKA_SCHEMA_REGISTRY_PASSWORD) {
+      schemaRegistry.auth = {
+        password: process.env.LOADMILL_KAFKA_SCHEMA_REGISTRY_PASSWORD,
+        username: process.env.LOADMILL_KAFKA_SCHEMA_REGISTRY_USERNAME,
+      };
+    }
+    if (process.env.LOADMILL_KAFKA_SCHEMA_SUBJECT) {
+      schemaRegistry.encode = {
+        subject: process.env.LOADMILL_KAFKA_SCHEMA_SUBJECT,
+      };
+      if (process.env.LOADMILL_KAFKA_SCHEMA_VERSION) {
+        schemaRegistry.encode.version = Number(process.env.LOADMILL_KAFKA_SCHEMA_VERSION);
+      }
+    }
+    initSchemaRegistry(schemaRegistry);
+  }
+};
+
+export const handleKafkaCompressionEnvVars = (): void => {
+  if (process.env.LOADMILL_KAFKA_LZ4_COMPRESSION_CODEC) {
+    CompressionCodecs[CompressionTypes.LZ4] = new LZ4().codec;
+  }
+};
 
 export const initSchemaRegistry = async ({ url, auth, encode }: RegistryOptions): Promise<string> => {
   let message = 'Schema registry already initialized';
@@ -43,11 +74,4 @@ export const encode = async (value: string | object): Promise<Buffer | undefined
   if (activeSchemaId) {
     return await schemaRegistry?.encode(activeSchemaId, value);
   }
-};
-
-export const getActiveSchemaId = (): number => {
-  return activeSchemaId;
-};
-export const asd = (): 'asd' => {
-  return 'asd';
 };
