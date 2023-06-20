@@ -1,5 +1,6 @@
-import { UUID } from "crypto";
-import { Consumer, KafkaConfig } from "kafkajs";
+import { UUID } from 'crypto';
+
+import { Consumer, KafkaConfig } from 'kafkajs';
 
 export type Connections = {
   [id: string]: Subscriber;
@@ -8,13 +9,13 @@ export type Connections = {
 export type Subscriber = {
   consumer: Consumer;
   messages: string[];
-  topic: string;
-  timeOfSubscription: number; // unix timestamp (Date.now())
+  timeOfSubscription: number;
+  topic: string; // unix timestamp (Date.now())
 };
 
 export type ProduceOptions = SubscribeOptions & {
-  message: string | object;
   encode?: EncodeSchemaOptions;
+  message: string | object;
 };
 
 export type SubscribeOptions = Pick<KafkaConfig, 'sasl' | 'ssl'> & {
@@ -29,12 +30,12 @@ export type ConsumeOptions = {
 };
 
 export type RegistryOptions = {
-  url: string;
   auth?: {
-    username: string;
     password: string;
+    username: string;
   };
   encode?: EncodeSchemaOptions;
+  url: string;
 };
 
 export type EncodeSchemaOptions = {

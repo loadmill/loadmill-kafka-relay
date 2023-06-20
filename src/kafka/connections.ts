@@ -1,8 +1,9 @@
 import { Consumer } from 'kafkajs';
-import { Connections } from '../types';
-import log from '../log';
 
-export const connections: Connections = {};
+import log from '../log';
+import { Connections, Subscriber } from '../types';
+
+const connections: Connections = {};
 
 const MAX_OPEN_CONNECTION_TIME_MS = 10 * 1000 * 60; // 10 minutes
 const CLOSE_CONNECTIONS_INTERVAL_MS = 1000 * 60; // 60 seconds
@@ -20,10 +21,11 @@ const closeOldConnections = () => {
   });
 };
 
-export const startCloseOldConnectionsInterval = () =>
+export const startCloseOldConnectionsInterval = (): void => {
   setInterval(closeOldConnections, CLOSE_CONNECTIONS_INTERVAL_MS);
+};
 
-export const addConnection = (id: string, consumer: Consumer, topic: string) => {
+export const addConnection = (id: string, consumer: Consumer, topic: string): Subscriber => {
   connections[id] = {
     consumer,
     messages: [],
@@ -31,6 +33,6 @@ export const addConnection = (id: string, consumer: Consumer, topic: string) => 
     topic,
   };
   return connections[id];
-}
+};
 
-export const getConnection = (id: string) => connections[id];
+export const getConnection = (id: string): Subscriber => connections[id];

@@ -1,16 +1,48 @@
-import { SchemaRegistry } from "@kafkajs/confluent-schema-registry";
-import { EncodeSchemaOptions, RegistryOptions } from "../../types";
-import log from "../../log";
+import { SchemaRegistry } from '@kafkajs/confluent-schema-registry';
+import { CompressionCodecs, CompressionTypes } from 'kafkajs';
+import LZ4 from 'kafkajs-lz4';
+
+import log from '../../log';
+import { EncodeSchemaOptions, RegistryOptions } from '../../types';
 
 let schemaRegistry: SchemaRegistry;
 let activeSchemaId: number;
 let latestUrl: string;
 
+export const handleKafkaRegistryEnvVars = (): void => {
+  if (process.env.LOADMILL_KAFKA_SCHEMA_REGISTRY_URL) {
+    const schemaRegistry: RegistryOptions = {
+      url: process.env.LOADMILL_KAFKA_SCHEMA_REGISTRY_URL,
+    };
+    if (process.env.LOADMILL_KAFKA_SCHEMA_REGISTRY_USERNAME && process.env.LOADMILL_KAFKA_SCHEMA_REGISTRY_PASSWORD) {
+      schemaRegistry.auth = {
+        password: process.env.LOADMILL_KAFKA_SCHEMA_REGISTRY_PASSWORD,
+        username: process.env.LOADMILL_KAFKA_SCHEMA_REGISTRY_USERNAME,
+      };
+    }
+    if (process.env.LOADMILL_KAFKA_SCHEMA_SUBJECT) {
+      schemaRegistry.encode = {
+        subject: process.env.LOADMILL_KAFKA_SCHEMA_SUBJECT,
+      };
+      if (process.env.LOADMILL_KAFKA_SCHEMA_VERSION) {
+        schemaRegistry.encode.version = Number(process.env.LOADMILL_KAFKA_SCHEMA_VERSION);
+      }
+    }
+    initSchemaRegistry(schemaRegistry);
+  }
+};
+
+export const handleKafkaCompressionEnvVars = (): void => {
+  if (process.env.LOADMILL_KAFKA_LZ4_COMPRESSION_CODEC) {
+    CompressionCodecs[CompressionTypes.LZ4] = new LZ4().codec;
+  }
+};
+
 export const initSchemaRegistry = async ({ url, auth, encode }: RegistryOptions): Promise<string> => {
   let message = 'Schema registry already initialized';
   if (url && url !== latestUrl) {
     message = `Initializing schema registry at ${url}`;
-    schemaRegistry = new SchemaRegistry({ host: url, auth });
+    schemaRegistry = new SchemaRegistry({ auth, host: url });
     log.info(message);
     latestUrl = url;
   }
@@ -34,7 +66,7 @@ export const setEncodeSchema = async (encodeSchemaOptions: EncodeSchemaOptions):
   log.info(`Active Schema id set to ${activeSchemaId}`);
 };
 
-export const decode = async (encodedValue: Buffer): Promise<any> => {
+export const decode = async (encodedValue: Buffer): Promise<string | undefined> => {
   return await schemaRegistry?.decode(encodedValue);
 };
 
@@ -42,8 +74,4 @@ export const encode = async (value: string | object): Promise<Buffer | undefined
   if (activeSchemaId) {
     return await schemaRegistry?.encode(activeSchemaId, value);
   }
-};
-
-export const getActiveSchemaId = (): number => {
-  return activeSchemaId;
 };

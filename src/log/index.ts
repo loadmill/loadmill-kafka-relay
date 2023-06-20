@@ -1,38 +1,50 @@
-import { createLogger, format, transports } from 'winston';
+import pino from 'pino';
+
 import { APP_NAME } from '../constants';
 
-const { combine, timestamp, printf, colorize } = format;
+const baseTargetOptions = {
+  ignore: 'pid,hostname',
+  translateTime: 'SYS:yyyy-mm-dd HH:MM:ss.l',
+};
 
-const logFormat = printf(({ level, message, timestamp }) => {
-  if (typeof message === 'object') {
-    message = JSON.stringify(message, null, 2);
-  }
-  return `${timestamp} | ${level} | ${message}`;
+const baseTarget = {
+  level: process.env.LOG_LEVEL || 'info',
+  options: baseTargetOptions,
+  target: 'pino-pretty',
+};
+
+const stdoutTarget = {
+  ...baseTarget,
+  options: {
+    ...baseTargetOptions,
+    colorize: true,
+  },
+};
+
+if (process.env.NODE_ENV === 'development') {
+  stdoutTarget.level = 'debug';
+}
+
+const fileTarget = {
+  ...baseTarget,
+  options: {
+    ...baseTargetOptions,
+    colorize: false,
+    destination: `${APP_NAME}.log`,
+  },
+};
+
+const targets = [
+  fileTarget,
+  stdoutTarget,
+];
+
+const transport = pino.transport({
+  targets,
 });
 
-const timestampFormat = timestamp({
-  format: 'DD-MM-YYYY HH:mm:ss:SSS'
-});
-
-const log = createLogger({
-  transports: [
-    new transports.Console({
-      format: combine(
-        colorize(),
-        timestampFormat,
-        logFormat,
-      ),
-      level: 'debug',
-    }),
-    new transports.File({
-      filename: `${APP_NAME}.log`,
-      format: combine(
-        timestampFormat,
-        logFormat,
-      ),
-      level: 'info',
-    })
-  ]
-});
+const log = pino({
+  level: 'debug', // https://github.com/pinojs/pino/issues/1639#issuecomment-1418324692
+}, transport);
 
 export default log;
