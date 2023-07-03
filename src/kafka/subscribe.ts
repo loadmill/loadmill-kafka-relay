@@ -28,8 +28,12 @@ export const subscribe = async (
   await consumer.subscribe({ fromBeginning: true, topic });
   await consumer.run({
     eachMessage: async ({ message }) => {
-      const value = await decode(message.value as Buffer) || message.value?.toString();
-      connection.messages.push(value || '');
+      const value = await decode(message.value as Buffer) || message.value?.toString() || '';
+
+      connection.messages.push({
+        ...message,
+        value,
+      });
     },
   });
   return { id };

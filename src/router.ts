@@ -18,7 +18,15 @@ import {
   subscribeValidationSchema
 } from './server-validation';
 import { compile } from './server-validation/compilation';
-import { ConsumeOptions, EncodeSchemaOptions, ProduceOptions, ProduceParams, RegistryOptions, SubscribeOptions, SubscribeParams } from './types';
+import {
+  ConsumeOptions,
+  EncodeSchemaOptions,
+  ProduceOptions,
+  ProduceParams,
+  RegistryOptions,
+  SubscribeOptions,
+  SubscribeParams
+} from './types';
 
 const app = Fastify({
   logger: log,
@@ -56,25 +64,21 @@ app.get('/consume/:id', { schema: consumeValidationSchema }, async (request, rep
   const consumed = await consume({ id }, consumeOptions);
   reply.type('application/json').code(200);
 
-  if (consumeOptions.multiple) {
-    const messages = [];
-    for (const m of consumed) {
-      try {
-        messages.push(JSON.parse(m));
-      } catch (e) {
-        messages.push(m);
-      }
-    }
-    return {
-      messages,
-    };
-  } else {
-    let message = consumed[0];
+  const messages = [];
+  for (const m of consumed) {
     try {
-      message = JSON.parse(message);
-    } catch { }
-    return { message };
+      const parsed = JSON.parse(m.value as string);
+      messages.push({
+        ...m,
+        value: parsed,
+      });
+    } catch (e) {
+      messages.push(m);
+    }
   }
+  return {
+    messages,
+  };
 });
 
 app.post('/produce', {
