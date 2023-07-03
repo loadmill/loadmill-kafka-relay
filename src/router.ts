@@ -18,7 +18,7 @@ import {
   subscribeValidationSchema
 } from './server-validation';
 import { compile } from './server-validation/compilation';
-import { ConsumeOptions, EncodeSchemaOptions, ProduceOptions, RegistryOptions, SubscribeOptions } from './types';
+import { ConsumeOptions, EncodeSchemaOptions, ProduceOptions, ProduceParams, RegistryOptions, SubscribeOptions, SubscribeParams } from './types';
 
 const app = Fastify({
   logger: log,
@@ -33,8 +33,8 @@ app.post('/subscribe', {
   preValidation: injectEnvVars,
   schema: subscribeValidationSchema,
 }, async (request, reply) => {
-  const subscribeOptions = request.body as SubscribeOptions;
-  const { id } = await subscribe(subscribeOptions);
+  const { brokers, topic, sasl, ssl } = request.body as SubscribeParams & SubscribeOptions;
+  const { id } = await subscribe({ brokers, topic }, { sasl, ssl });
   reply.type('application/json').code(200);
   return { id };
 });
@@ -81,8 +81,8 @@ app.post('/produce', {
   preValidation: injectEnvVars,
   schema: produceValidationSchema,
 }, async (request, reply) => {
-  const producingOptions = request.body as ProduceOptions;
-  const recordMetaData = await produceMessage(producingOptions);
+  const { brokers, message, topic, sasl, ssl } = request.body as ProduceParams & ProduceOptions;
+  const recordMetaData = await produceMessage({ brokers, message, topic }, { sasl, ssl });
   reply.type('application/json').code(200);
   return recordMetaData;
 });

@@ -13,15 +13,20 @@ export type Subscriber = {
   topic: string; // unix timestamp (Date.now())
 };
 
-export type ProduceOptions = SubscribeOptions & {
-  encode?: EncodeSchemaOptions;
+export type ProduceParams = SubscribeParams & {
   message: string | object;
 };
 
-export type SubscribeOptions = Pick<KafkaConfig, 'sasl' | 'ssl'> & {
+export type ProduceOptions = SubscribeOptions & {
+  encode?: EncodeSchemaOptions;
+};
+
+export type SubscribeParams = {
   brokers: string[];
   topic: string;
 };
+
+export type SubscribeOptions = Pick<KafkaConfig, 'sasl' | 'ssl'>;
 
 export type ConsumeParams = {
   id: UUID | string;
