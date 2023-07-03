@@ -41,6 +41,12 @@ Then run the image:
 docker run -p 3000:3000 loadmill/kafka-relay-client
 ```
 
+### Docker hub
+To use the ready-made docker from docker-hub run the following command:
+```bash
+docker run -p 3000:3000 loadmill/kafka-relay 
+```
+
 Option 2:
 ### Node.js
 
