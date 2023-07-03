@@ -40,24 +40,41 @@ app.post('/subscribe', {
 });
 
 app.get('/consume/:id', { schema: consumeValidationSchema }, async (request, reply) => {
+  const { id } = request.params as { id: string };
+
+  const { filter: regexFilter, multiple, timeout } = request.query as { filter?: string, multiple?: number, timeout?: number };
   const consumeOptions = {
-    id: (request.params as { id: string }).id,
-    regexFilter: (request.query as { filter?: string }).filter,
-    timeout: (request.query as { timeout?: number }).timeout,
+    multiple,
+    regexFilter,
+    timeout,
   } as ConsumeOptions;
 
-  if (!getConnection(consumeOptions.id)) {
-    throw new ClientError(404, `No connection found for id ${consumeOptions.id}`);
+  if (!getConnection(id)) {
+    throw new ClientError(404, `No connection found for id ${id}`);
   }
-  const consumedMsg = await consume(consumeOptions);
-  let message;
-  try {
-    message = JSON.parse(consumedMsg);
-  } catch (e) {
-    message = consumedMsg;
-  }
+
+  const consumed = await consume({ id }, consumeOptions);
   reply.type('application/json').code(200);
-  return { message };
+
+  if (consumeOptions.multiple) {
+    const messages = [];
+    for (const m of consumed) {
+      try {
+        messages.push(JSON.parse(m));
+      } catch (e) {
+        messages.push(m);
+      }
+    }
+    return {
+      messages,
+    };
+  } else {
+    let message = consumed[0];
+    try {
+      message = JSON.parse(message);
+    } catch { }
+    return { message };
+  }
 });
 
 app.post('/produce', {

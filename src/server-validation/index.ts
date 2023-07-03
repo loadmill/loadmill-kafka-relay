@@ -69,11 +69,26 @@ export const consumeValidationSchema: FastifySchema = {
     required: ['id'],
   },
   querystring: {
-    filter: { type: 'string', format: 'regex' },
-    timeout: {
-      type: 'string',
-      format: 'int32',
-      pattern: '^(?:[5-9]|1[0-9]|2[0-5])$', // min 5, max 25
+    additionalProperties: false,
+    type: 'object',
+    properties: {
+      filter: { type: 'string', format: 'regex' },
+      multiple: {
+        type: 'string',
+        format: 'int32',
+        pattern: '^(?:[1-9]|10)$', // min 1, max 10
+      },
+      timeout: {
+        type: 'string',
+        format: 'int32',
+        pattern: '^(?:[5-9]|1[0-9]|2[0-5])$', // min 5, max 25
+      },
+    },
+    errorMessage: {
+      properties: {
+        multiple: 'Should be an integer between 1 and 10',
+        timeout: 'Should be an integer between 5 and 25',
+      },
     },
   },
 };

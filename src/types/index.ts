@@ -23,8 +23,12 @@ export type SubscribeOptions = Pick<KafkaConfig, 'sasl' | 'ssl'> & {
   topic: string;
 };
 
+export type ConsumeParams = {
+  id: UUID | string;
+}
+
 export type ConsumeOptions = {
-  id: UUID;
+  multiple?: number;
   regexFilter?: string;
   timeout?: number; /** in seconds */
 };
