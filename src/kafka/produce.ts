@@ -1,13 +1,16 @@
 import { Kafka, Partitioners, RecordMetadata } from 'kafkajs';
 
 import { APP_NAME } from '../constants';
-import { ProduceOptions } from '../types';
+import { ProduceOptions, ProduceParams } from '../types';
 
 import { prepareBrokers } from './brokers';
 import { kafkaLogCreator } from './log-creator';
 import { encode } from './schema-registry';
 
-export const produceMessage = async ({ brokers, topic, message, sasl, ssl }: ProduceOptions): Promise<RecordMetadata> => {
+export const produceMessage = async (
+  { brokers, message, topic }: ProduceParams,
+  { sasl, ssl }: ProduceOptions
+): Promise<RecordMetadata> => {
   const kafka = new Kafka({
     brokers: prepareBrokers(brokers),
     clientId: APP_NAME,

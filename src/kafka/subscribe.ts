@@ -3,14 +3,17 @@ import { randomUUID } from 'crypto';
 import { Kafka } from 'kafkajs';
 
 import { APP_NAME } from '../constants';
-import { SubscribeOptions } from '../types';
+import { SubscribeOptions, SubscribeParams } from '../types';
 
 import { prepareBrokers } from './brokers';
 import { addConnection } from './connections';
 import { kafkaLogCreator } from './log-creator';
 import { decode } from './schema-registry';
 
-export const subscribe = async ({ brokers, sasl, ssl, topic }: SubscribeOptions): Promise<{ id: string }> => {
+export const subscribe = async (
+  { brokers, topic }: SubscribeParams,
+  { sasl, ssl }: SubscribeOptions
+): Promise<{ id: string }> => {
   const kafka = new Kafka({
     brokers: prepareBrokers(brokers),
     clientId: APP_NAME,
@@ -25,8 +28,12 @@ export const subscribe = async ({ brokers, sasl, ssl, topic }: SubscribeOptions)
   await consumer.subscribe({ fromBeginning: true, topic });
   await consumer.run({
     eachMessage: async ({ message }) => {
-      const value = await decode(message.value as Buffer) || message.value?.toString();
-      connection.messages.push(value || '');
+      const value = await decode(message.value as Buffer) || message.value?.toString() || '';
+
+      connection.messages.push({
+        ...message,
+        value,
+      });
     },
   });
   return { id };

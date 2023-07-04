@@ -18,7 +18,15 @@ import {
   subscribeValidationSchema
 } from './server-validation';
 import { compile } from './server-validation/compilation';
-import { ConsumeOptions, EncodeSchemaOptions, ProduceOptions, RegistryOptions, SubscribeOptions } from './types';
+import {
+  ConsumeOptions,
+  EncodeSchemaOptions,
+  ProduceOptions,
+  ProduceParams,
+  RegistryOptions,
+  SubscribeOptions,
+  SubscribeParams
+} from './types';
 
 const app = Fastify({
   logger: log,
@@ -33,39 +41,52 @@ app.post('/subscribe', {
   preValidation: injectEnvVars,
   schema: subscribeValidationSchema,
 }, async (request, reply) => {
-  const subscribeOptions = request.body as SubscribeOptions;
-  const { id } = await subscribe(subscribeOptions);
+  const { brokers, topic, sasl, ssl } = request.body as SubscribeParams & SubscribeOptions;
+  const { id } = await subscribe({ brokers, topic }, { sasl, ssl });
   reply.type('application/json').code(200);
   return { id };
 });
 
 app.get('/consume/:id', { schema: consumeValidationSchema }, async (request, reply) => {
+  const { id } = request.params as { id: string };
+
+  const { filter: regexFilter, multiple, timeout } = request.query as { filter?: string, multiple?: number, timeout?: number };
   const consumeOptions = {
-    id: (request.params as { id: string }).id,
-    regexFilter: (request.query as { filter?: string }).filter,
-    timeout: (request.query as { timeout?: number }).timeout,
+    multiple,
+    regexFilter,
+    timeout,
   } as ConsumeOptions;
 
-  if (!getConnection(consumeOptions.id)) {
-    throw new ClientError(404, `No connection found for id ${consumeOptions.id}`);
+  if (!getConnection(id)) {
+    throw new ClientError(404, `No connection found for id ${id}`);
   }
-  const consumedMsg = await consume(consumeOptions);
-  let message;
-  try {
-    message = JSON.parse(consumedMsg);
-  } catch (e) {
-    message = consumedMsg;
-  }
+
+  const consumed = await consume({ id }, consumeOptions);
   reply.type('application/json').code(200);
-  return { message };
+
+  const messages = [];
+  for (const m of consumed) {
+    try {
+      const parsed = JSON.parse(m.value as string);
+      messages.push({
+        ...m,
+        value: parsed,
+      });
+    } catch (e) {
+      messages.push(m);
+    }
+  }
+  return {
+    messages,
+  };
 });
 
 app.post('/produce', {
   preValidation: injectEnvVars,
   schema: produceValidationSchema,
 }, async (request, reply) => {
-  const producingOptions = request.body as ProduceOptions;
-  const recordMetaData = await produceMessage(producingOptions);
+  const { brokers, message, topic, sasl, ssl } = request.body as ProduceParams & ProduceOptions;
+  const recordMetaData = await produceMessage({ brokers, message, topic }, { sasl, ssl });
   reply.type('application/json').code(200);
   return recordMetaData;
 });
