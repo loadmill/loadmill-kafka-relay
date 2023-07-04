@@ -6,6 +6,8 @@ It was built to help you test your Kafka infrastructure and applications, and to
 ## Table of Contents
 - [Getting Started](#getting-started)
   - [Docker](#docker)
+    - [Docker hub](#docker-hub)
+    - [Local Docker Build](#local-docker-build)
   - [Node.js](#nodejs)
 - [API Reference](#api-reference)
   - [Basic Usage](#basic-usage)
@@ -30,21 +32,28 @@ To use the Loadmill Kafka Relay Client, you have 2 options:
 **Option 1:**
 ### Docker
 
-The Loadmill Kafka Relay Client is available as a Docker image, which you can run using the following commands:
-
-Build the image:
-```bash
-docker build -t loadmill/kafka-relay-client .
-```
-Then run the image:
-```bash
-docker run -p 3000:3000 loadmill/kafka-relay-client
-```
+The Loadmill Kafka Relay Client is available as a Docker image, which you either pull from Docker Hub or build locally.
 
 ### Docker hub
-To use the ready-made docker from docker-hub run the following command:
+To use the ready-made docker from docker-hub run the following commands:
+- Download the image
+```bash
+docker pull loadmill/kafka-relay:latest
+```
+- Run the image
 ```bash
 docker run -p 3000:3000 loadmill/kafka-relay 
+```
+
+OR you can build the image locally, in the following way:
+### Local Docker Build
+- Build the image:
+```bash
+docker build -t loadmill/kafka-relay .
+```
+- Run the image:
+```bash
+docker run -p 3000:3000 loadmill/kafka-relay
 ```
 
 Option 2:
@@ -116,20 +125,67 @@ Use the `id` field in the response to consume messages from the subscribed Kafka
 Endpoint: `GET /consume/:id`
 
 To consume messages from a subscribed Kafka topic, send a GET request to the `/consume/:id` endpoint, where `:id` represents the unique identifier of the subscription.
+The default result will be the latest message on the topic.
 
-The result will be the latest message on the topic.
-However, you can use the `filter` query parameter to filter the topic's messages by a regular expression. When doing so the result will be the latest message that matches the filter.
+If no message is available, the relay waits for 1 second and tries to consume again. If no message is available after 25 seconds (or a provided `timeout` value), an error will be returned.
 
-If no message is available, we will wait for 1 second and try again. If no message is available after 25 seconds, an error will be returned.
+Optional query parameters:
+- `filter` (string, optional): A regular expression to filter the topic's messages by.
+- `multiple` (number, optional): The number of messages to consume. Will return the latest `multiple` messages. Minimum value is 1, maximum value is 10. Defaults to 1.
+- `timeout` (number, optional): The maximum time (in seconds) to wait for a message to be available. If no message is available after the timeout, an error will be returned. Minimum value is 5, maximum value is 25. Defaults to 25.
 
 Example Request 1:
 ```http
 GET /consume/c8bf8b9b-5bb6-4f17-babd-3d027eb7ad55
 ```
 
+Example Response 1:
+```json
+{
+  "messages": [
+    {
+      "key": "my-key",
+      "value": "Hello, Kafka!",
+      "timestamp": 1623346800000,
+      ...
+    }
+  ]
+}
+```
+
 Example Request 2 (using a regex filter):
 ```http
 GET /consume/c8bf8b9b-5bb6-4f17-babd-3d027eb7ad55?filter=myregex
+```
+
+Example Request 3 (using a timeout):
+```http
+GET /consume/c8bf8b9b-5bb6-4f17-babd-3d027eb7ad55?filter=myregex&timeout=7
+```
+
+Example Request 4 (using multiple messages option):
+```http
+GET /consume/c8bf8b9b-5bb6-4f17-babd-3d027eb7ad55?multiple=2
+```
+
+Example Response 4 (using multiple messages option):
+```json
+{
+  "messages": [
+    {
+      "key": "my-key-1",
+      "value": "Hello, Kafka 1!",
+      "timestamp": 1623346800000,
+      ...
+    },
+    {
+      "key": "my-key-2",
+      "value": "Hello, Kafka 2!",
+      "timestamp": 1623346800001,
+      ...
+    }
+  ]
+}
 ```
 
 #### Compression codecs
