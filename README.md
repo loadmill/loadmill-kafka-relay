@@ -207,11 +207,17 @@ To produce a message to a Kafka topic, send a POST request to the `/produce` end
   - `topic` (string): The Kafka topic to which the message will be produced.
   - `message` (string or object): The message to be produced.
 - Optional Parameters:
+  - `encode` (object, optional): Options for schema encoding.
+    - `subject` (string): The subject of the schema.
+    - `version` (number, optional): The version of the schema.
   - `ssl` (boolean, optional): Whether to use SSL for the Kafka brokers.
   - `sasl` (object, optional): SASL authentication credentials for the Kafka brokers.
     - `mechanism` (string): The SASL mechanism to use for authentication.
     - `username` (string): The username for authentication.
     - `password` (string): The password for authentication.
+
+Note: Using `encode` will only apply your encoding to the current message.
+It will not override the global encode (this is set via the [/registry/encode](#set-encode-schema) endpoint).
 
 Example Request:
 ```http
@@ -225,6 +231,10 @@ Content-Type: application/json
   "topic": "my-topic",
   "message": "Hello, Kafka!",
   // optional parameters
+  "encode": {
+    "subject": "my-schema",
+    "version": 1
+  },
   "ssl": true,
   "sasl": {
     "mechanism": "plain",

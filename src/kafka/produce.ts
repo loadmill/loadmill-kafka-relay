@@ -40,7 +40,7 @@ export const produceMessage = async (
     topic,
   });
 
-  if (encodeOptions && currentActiveSchemaId != null) {
+  if (encodeOptions) {
     setActiveSchemaId(currentActiveSchemaId);
   }
 
