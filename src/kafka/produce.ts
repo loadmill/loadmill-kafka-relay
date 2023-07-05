@@ -5,11 +5,16 @@ import { ProduceOptions, ProduceParams } from '../types';
 
 import { prepareBrokers } from './brokers';
 import { kafkaLogCreator } from './log-creator';
-import { encode } from './schema-registry';
+import {
+  encode,
+  getActiveSchemaId,
+  setActiveSchemaId,
+  setEncodeSchema,
+} from './schema-registry';
 
 export const produceMessage = async (
   { brokers, message, topic }: ProduceParams,
-  { sasl, ssl }: ProduceOptions,
+  { encode: encodeOptions, sasl, ssl }: ProduceOptions,
 ): Promise<RecordMetadata> => {
   const kafka = new Kafka({
     brokers: prepareBrokers(brokers),
@@ -22,12 +27,23 @@ export const produceMessage = async (
     createPartitioner: Partitioners.LegacyPartitioner,
   });
   await producer.connect();
+
+  const currentActiveSchemaId = getActiveSchemaId();
+  if (encodeOptions) {
+    await setEncodeSchema(encodeOptions);
+  }
+
   const [recordMetaData] = await producer.send({
     messages: [
       { value: await encode(message) || JSON.stringify(message) },
     ],
     topic,
   });
+
+  if (encodeOptions && currentActiveSchemaId != null) {
+    setActiveSchemaId(currentActiveSchemaId);
+  }
+
   await producer.disconnect();
   return recordMetaData;
 };
