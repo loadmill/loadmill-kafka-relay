@@ -9,7 +9,7 @@ import { encode } from './schema-registry';
 
 export const produceMessage = async (
   { brokers, message, topic }: ProduceParams,
-  { sasl, ssl }: ProduceOptions
+  { sasl, ssl }: ProduceOptions,
 ): Promise<RecordMetadata> => {
   const kafka = new Kafka({
     brokers: prepareBrokers(brokers),

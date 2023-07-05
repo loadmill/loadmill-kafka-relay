@@ -15,7 +15,7 @@ import {
   encodeValidationSchema,
   produceValidationSchema,
   registryValidationSchema,
-  subscribeValidationSchema
+  subscribeValidationSchema,
 } from './server-validation';
 import { compile } from './server-validation/compilation';
 import {
@@ -25,7 +25,7 @@ import {
   ProduceParams,
   RegistryOptions,
   SubscribeOptions,
-  SubscribeParams
+  SubscribeParams,
 } from './types';
 
 const app = Fastify({

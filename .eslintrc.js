@@ -27,7 +27,7 @@ module.exports = {
       files: ['*.ts'],
       rules: {
         '@typescript-eslint/explicit-module-boundary-types': 'error',
-      }
+      },
     },
     {
       env: {
@@ -40,7 +40,7 @@ module.exports = {
       rules: {
         'no-console': 'off',
       },
-    }
+    },
   ],
   parser: '@typescript-eslint/parser',
   parserOptions: {
@@ -80,7 +80,8 @@ module.exports = {
     '@typescript-eslint/no-unused-vars': 'error',
     '@typescript-eslint/no-var-requires': 'off',
     'brace-style': ['error'],
-    'comma-spacing': ['error', { 'after': true, 'before': false, }],
+    'comma-dangle': ['error', 'always-multiline'],
+    'comma-spacing': ['error', { 'after': true, 'before': false }],
     'comma-style': ['error', 'last'],
     'curly': ['error'],
     'eol-last': ['error'],
@@ -95,7 +96,7 @@ module.exports = {
       'groups': ['builtin', 'external', 'internal', 'parent', 'sibling', 'index'],
       'newlines-between': 'always',
       'warnOnUnassignedImports': true,
-    }
+    },
     ],
     'indent': ['error', 2, { 'SwitchCase': 1 }],
     'keyword-spacing': ['error'],
@@ -110,7 +111,7 @@ module.exports = {
     'no-use-before-define': 'off',
     'no-var': 'error',
     'object-curly-spacing': ['error', 'always'],
-    'prefer-const': ['error', { destructuring: 'all', },],
+    'prefer-const': ['error', { destructuring: 'all' }],
     'quotes': ['error', 'single'],
     'semi': ['error', 'always'],
     'sort-imports': ['error',
@@ -119,7 +120,7 @@ module.exports = {
         ignoreDeclarationSort: true,
       // ignoreMemberSort: true,
       // allowSeparatedGroups: true
-      }
+      },
     ],
     'sort-keys': 'error',
     'sort-vars': 'error',

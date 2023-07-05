@@ -14,7 +14,7 @@ type PresentableError = {
 export const serverErrorHandler = (
   error: ErrorType,
   request: FastifyRequest,
-  reply: FastifyReply
+  reply: FastifyReply,
 ): PresentableError => {
   const { log } = request;
   log.error(error);

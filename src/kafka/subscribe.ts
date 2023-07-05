@@ -12,7 +12,7 @@ import { decode } from './schema-registry';
 
 export const subscribe = async (
   { brokers, topic }: SubscribeParams,
-  { sasl, ssl }: SubscribeOptions
+  { sasl, ssl }: SubscribeOptions,
 ): Promise<{ id: string }> => {
   const kafka = new Kafka({
     brokers: prepareBrokers(brokers),
