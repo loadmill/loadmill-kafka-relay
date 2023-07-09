@@ -79,6 +79,10 @@ export const consumeValidationSchema: FastifySchema = {
         format: 'int32',
         pattern: '^(?:[1-9]|10)$', // min 1, max 10
       },
+      text: {
+        type: 'string',
+        enum: ['true', 'false', 'TRUE', 'FALSE', 'True', 'False', '1', '0'],
+      },
       timeout: {
         type: 'string',
         format: 'int32',
@@ -88,6 +92,7 @@ export const consumeValidationSchema: FastifySchema = {
     errorMessage: {
       properties: {
         multiple: 'Should be an integer between 1 and 10',
+        text: 'Should be a boolean (true/false)',
         timeout: 'Should be an integer between 5 and 25',
       },
     },

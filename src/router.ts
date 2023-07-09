@@ -1,6 +1,6 @@
 import Fastify from 'fastify';
 
-import { APP_NAME } from './constants';
+import { APP_NAME, TRUE_AS_STRING_VALUES } from './constants';
 import { ClientError } from './errors';
 import { injectEnvVars } from './inject-env';
 import { getConnection } from './kafka/connections';
@@ -50,7 +50,7 @@ app.post('/subscribe', {
 app.get('/consume/:id', { schema: consumeValidationSchema }, async (request, reply) => {
   const { id } = request.params as { id: string };
 
-  const { filter: regexFilter, multiple, timeout } = request.query as { filter?: string, multiple?: number, timeout?: number };
+  const { filter: regexFilter, multiple, text, timeout } = request.query as { filter?: string, multiple?: number, text?: string; timeout?: number };
   const consumeOptions = {
     multiple,
     regexFilter,
@@ -65,15 +65,19 @@ app.get('/consume/:id', { schema: consumeValidationSchema }, async (request, rep
   reply.type('application/json').code(200);
 
   const messages = [];
-  for (const m of consumed) {
-    try {
-      const parsed = JSON.parse(m.value as string);
-      messages.push({
-        ...m,
-        value: parsed,
-      });
-    } catch (e) {
-      messages.push(m);
+  if (TRUE_AS_STRING_VALUES.some((b) => b === text)) {
+    messages.push(...consumed);
+  } else {
+    for (const m of consumed) {
+      try {
+        const parsed = JSON.parse(m.value as string);
+        messages.push({
+          ...m,
+          value: parsed,
+        });
+      } catch (e) {
+        messages.push(m);
+      }
     }
   }
   return {
