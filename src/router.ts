@@ -1,10 +1,10 @@
 import Fastify from 'fastify';
 
-import { APP_NAME, TRUE_AS_STRING_VALUES } from './constants';
+import { APP_NAME } from './constants';
 import { ClientError } from './errors';
 import { injectEnvVars } from './inject-env';
 import { getConnection } from './kafka/connections';
-import { consume } from './kafka/consume';
+import { consume, isTruthyString } from './kafka/consume';
 import { produceMessage } from './kafka/produce';
 import { initSchemaRegistry, setEncodeSchema } from './kafka/schema-registry';
 import { subscribe } from './kafka/subscribe';
@@ -65,7 +65,7 @@ app.get('/consume/:id', { schema: consumeValidationSchema }, async (request, rep
   reply.type('application/json').code(200);
 
   const messages = [];
-  if (TRUE_AS_STRING_VALUES.some((b) => b === text)) {
+  if (isTruthyString(text)) {
     messages.push(...consumed);
   } else {
     for (const m of consumed) {
