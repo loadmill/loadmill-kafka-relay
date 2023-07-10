@@ -37,6 +37,7 @@ export type ConsumeParams = {
 export type ConsumeOptions = {
   multiple?: number;
   regexFilter?: string;
+  text?: boolean;
   timeout?: number; /** in seconds */
 };
 

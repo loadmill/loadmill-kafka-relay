@@ -4,7 +4,7 @@ import { APP_NAME } from './constants';
 import { ClientError } from './errors';
 import { injectEnvVars } from './inject-env';
 import { getConnection } from './kafka/connections';
-import { consume } from './kafka/consume';
+import { consume, isTruthyString } from './kafka/consume';
 import { produceMessage } from './kafka/produce';
 import { initSchemaRegistry, setEncodeSchema } from './kafka/schema-registry';
 import { subscribe } from './kafka/subscribe';
@@ -50,7 +50,7 @@ app.post('/subscribe', {
 app.get('/consume/:id', { schema: consumeValidationSchema }, async (request, reply) => {
   const { id } = request.params as { id: string };
 
-  const { filter: regexFilter, multiple, timeout } = request.query as { filter?: string, multiple?: number, timeout?: number };
+  const { filter: regexFilter, multiple, text, timeout } = request.query as { filter?: string, multiple?: number, text?: string; timeout?: number };
   const consumeOptions = {
     multiple,
     regexFilter,
@@ -65,15 +65,19 @@ app.get('/consume/:id', { schema: consumeValidationSchema }, async (request, rep
   reply.type('application/json').code(200);
 
   const messages = [];
-  for (const m of consumed) {
-    try {
-      const parsed = JSON.parse(m.value as string);
-      messages.push({
-        ...m,
-        value: parsed,
-      });
-    } catch (e) {
-      messages.push(m);
+  if (isTruthyString(text)) {
+    messages.push(...consumed);
+  } else {
+    for (const m of consumed) {
+      try {
+        const parsed = JSON.parse(m.value as string);
+        messages.push({
+          ...m,
+          value: parsed,
+        });
+      } catch (e) {
+        messages.push(m);
+      }
     }
   }
   return {

@@ -1,3 +1,4 @@
+import { TRUE_AS_STRING_VALUES } from '../constants';
 import { ClientError } from '../errors';
 import log from '../log';
 import { ConsumeOptions, ConsumeParams, KafkaMessages } from '../types';
@@ -82,4 +83,8 @@ const getLatestNMessages = (messages: KafkaMessages, n: number = 1): KafkaMessag
 
 const delay = (timeout: number): Promise<unknown> => {
   return new Promise(resolve => setTimeout(resolve, timeout));
+};
+
+export const isTruthyString = (value?: string): boolean => {
+  return TRUE_AS_STRING_VALUES.some((b) => b === value);
 };

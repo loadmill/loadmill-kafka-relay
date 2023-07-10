@@ -133,6 +133,7 @@ Optional query parameters:
 - `filter` (string, optional): A regular expression to filter the topic's messages by.
 - `multiple` (number, optional): The number of messages to consume. Will return the latest `multiple` messages. Minimum value is 1, maximum value is 10. Defaults to 1.
 - `timeout` (number, optional): The maximum time (in seconds) to wait for a message to be available. If no message is available after the timeout, an error will be returned. Minimum value is 5, maximum value is 25. Defaults to 25.
+- `text` (boolean, optional): Whether to return the message value as a string (and not parse it as JSON). Defaults to false.
 
 Example Request 1:
 ```http
