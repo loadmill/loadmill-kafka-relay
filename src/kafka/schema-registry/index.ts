@@ -2,12 +2,20 @@ import { SchemaRegistry } from '@kafkajs/confluent-schema-registry';
 import { CompressionCodecs, CompressionTypes } from 'kafkajs';
 import LZ4 from 'kafkajs-lz4';
 
+import { ClientError } from '../../errors';
 import log from '../../log';
 import { EncodeSchemaOptions, RegistryOptions } from '../../types';
 
 let schemaRegistry: SchemaRegistry;
 let activeSchemaId: number;
 let latestUrl: string;
+
+export const getActiveSchemaId = (): number => activeSchemaId;
+
+export const setActiveSchemaId = (id: number): void => {
+  log.info(`Setting active schema id to ${id}`);
+  activeSchemaId = id;
+};
 
 export const handleKafkaRegistryEnvVars = (): void => {
   if (process.env.LOADMILL_KAFKA_SCHEMA_REGISTRY_URL) {
@@ -54,7 +62,7 @@ export const initSchemaRegistry = async ({ url, auth, encode }: RegistryOptions)
 
 export const setEncodeSchema = async (encodeSchemaOptions: EncodeSchemaOptions): Promise<void> => {
   if (!schemaRegistry) {
-    throw new Error('Schema registry not initialized. Hint: call POST /registry first');
+    throw new ClientError(400, 'Schema registry not initialized. Hint: call POST /registry first');
   }
   const { subject, version } = encodeSchemaOptions;
   log.info(`Setting encode schema with subject: ${subject}, version: ${version ? version.toString() : 'latest'}`);

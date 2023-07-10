@@ -40,6 +40,7 @@ export const produceValidationSchema: FastifySchema = {
       message: { type: ['string', 'object'] },
       sasl,
       ssl,
+      encode,
     },
     required: ['brokers', 'topic', 'message'],
   },
