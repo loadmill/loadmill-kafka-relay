@@ -30,17 +30,32 @@ const encode = {
   required: ['subject'],
 };
 
+const convertions = {
+  additionalProperties: false,
+  type: 'array',
+  items: {
+    additionalProperties: false,
+    type: 'object',
+    properties: {
+      key: { type: 'string' },
+      type: { type: 'string', enum: ['decimal'] },
+    },
+    required: ['key', 'type'],
+  },
+};
+
 export const produceValidationSchema: FastifySchema = {
   body: {
     additionalProperties: false,
     type: 'object',
     properties: {
       brokers,
-      topic,
       message: { type: ['string', 'object'] },
+      topic,
+      convertions,
+      encode,
       sasl,
       ssl,
-      encode,
     },
     required: ['brokers', 'topic', 'message'],
   },
