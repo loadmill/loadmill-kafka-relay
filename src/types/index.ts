@@ -26,7 +26,7 @@ export const isPrimitive = (obj: unknown): obj is Primitive => Object(obj) !== o
 export type Convertable = { [key: string]: unknown } | Primitive | null | undefined | Convertable[];
 
 export type ProduceOptions = SubscribeOptions & {
-  convertions?: ConvertOption[];
+  conversions?: ConvertOption[];
   encode?: EncodeSchemaOptions;
 };
 

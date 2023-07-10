@@ -208,7 +208,7 @@ To produce a message to a Kafka topic, send a POST request to the `/produce` end
   - `topic` (string): The Kafka topic to which the message will be produced.
   - `message` (string or object): The message to be produced.
 - Optional Parameters:
-  - `convertions` (array, optional): Options for certain keys inside the message. Each item in the array should be an object with the following keys:
+  - `conversions` (array, optional): Options for certain keys inside the message. Each item in the array should be an object with the following keys:
     - `key` (string): The key to convert.
     - `type` (string): The type to convert the key to. Can be one of the following: `decimal`, (currently only supports `decimal`).
   - `encode` (object, optional): Options for schema encoding.
@@ -235,7 +235,7 @@ Content-Type: application/json
   "topic": "my-topic",
   "message": "Hello, Kafka!",
   // optional parameters
-  "convertions": [
+  "conversions": [
     {
       "key": "my-key",
       "type": "decimal"

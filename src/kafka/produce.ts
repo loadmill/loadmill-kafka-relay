@@ -16,7 +16,7 @@ import {
 
 export const produceMessage = async (
   { brokers, message, topic }: ProduceParams,
-  { convertions, encode: encodeOptions, sasl, ssl }: ProduceOptions,
+  { conversions, encode: encodeOptions, sasl, ssl }: ProduceOptions,
 ): Promise<RecordMetadata> => {
   const kafka = new Kafka({
     brokers: prepareBrokers(brokers),
@@ -35,11 +35,11 @@ export const produceMessage = async (
     await setEncodeSchema(encodeOptions);
   }
 
-  if (convertions) {
+  if (conversions) {
     if (typeof message !== 'object') {
-      throw new ClientError(400, 'Message must be an object when convertions are provided');
+      throw new ClientError(400, 'Message must be an object when conversions are provided');
     }
-    convert(message, convertions);
+    convert(message, conversions);
   }
 
   const [recordMetaData] = await producer.send({

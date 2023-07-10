@@ -89,8 +89,8 @@ app.post('/produce', {
   preValidation: injectEnvVars,
   schema: produceValidationSchema,
 }, async (request, reply) => {
-  const { brokers, convertions, encode, message, topic, sasl, ssl } = request.body as ProduceParams & ProduceOptions;
-  const recordMetaData = await produceMessage({ brokers, message, topic }, { convertions, encode, sasl, ssl });
+  const { brokers, conversions, encode, message, topic, sasl, ssl } = request.body as ProduceParams & ProduceOptions;
+  const recordMetaData = await produceMessage({ brokers, message, topic }, { conversions, encode, sasl, ssl });
   reply.type('application/json').code(200);
   return recordMetaData;
 });

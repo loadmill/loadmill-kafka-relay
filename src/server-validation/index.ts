@@ -30,7 +30,7 @@ const encode = {
   required: ['subject'],
 };
 
-const convertions = {
+const conversions = {
   additionalProperties: false,
   type: 'array',
   items: {
@@ -52,7 +52,7 @@ export const produceValidationSchema: FastifySchema = {
       brokers,
       message: { type: ['string', 'object'] },
       topic,
-      convertions,
+      conversions,
       encode,
       sasl,
       ssl,

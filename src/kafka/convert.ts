@@ -6,7 +6,7 @@ import { Convertable, ConvertOption, ConvertType, isPrimitive } from '../types';
 
 export const convert = (
   obj: Convertable,
-  convertions: ConvertOption[],
+  conversions: ConvertOption[],
 ): void => {
   if (obj === null || obj === undefined) {
     return;
@@ -14,12 +14,12 @@ export const convert = (
     return;
   } else if (Array.isArray(obj)) {
     for (const item of obj) {
-      convert(item, convertions);
+      convert(item, conversions);
     }
   } else if (typeof obj === 'object') {
     for (const [key, value] of Object.entries(obj)) {
       if (obj.hasOwnProperty(key)) {
-        const convertion = convertions.find((c) => c.key === key);
+        const convertion = conversions.find((c) => c.key === key);
         if (convertion) {
           switch (convertion.type) {
             case ConvertType.DECIMAL:
@@ -30,7 +30,7 @@ export const convert = (
           }
         }
       }
-      convert(value as { [key: string]: unknown }, convertions);
+      convert(value as { [key: string]: unknown }, conversions);
     }
   }
 };
