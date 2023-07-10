@@ -16,12 +16,28 @@ export type Subscriber = {
 export type KafkaMessages = (Omit<KafkaMessage, 'value'> & { value?: string })[];
 
 export type ProduceParams = SubscribeParams & {
-  message: string | object;
+  message: string | Convertable;
 };
 
+export type Primitive = string | number | boolean;
+
+export const isPrimitive = (obj: unknown): obj is Primitive => Object(obj) !== obj;
+
+export type Convertable = { [key: string]: unknown } | Primitive | null | undefined | Convertable[];
+
 export type ProduceOptions = SubscribeOptions & {
+  convertions?: ConvertOption[];
   encode?: EncodeSchemaOptions;
 };
+
+export type ConvertOption = {
+  key: string;
+  type: ConvertType;
+};
+
+export enum ConvertType {
+  DECIMAL = 'decimal',
+}
 
 export type SubscribeParams = {
   brokers: string[];

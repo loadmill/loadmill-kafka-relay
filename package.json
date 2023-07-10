@@ -30,10 +30,12 @@
   },
   "dependencies": {
     "@kafkajs/confluent-schema-registry": "^3.3.0",
+    "@ovotech/avro-decimal": "^0.1.5",
     "ajv": "^8.12.0",
     "ajv-errors": "^3.0.0",
     "ajv-formats": "^2.1.1",
     "avsc": "^5.7.7",
+    "decimal.js": "^10.4.3",
     "dotenv": "^16.0.3",
     "fastify": "^4.17.0",
     "kafkajs": "^2.2.4",
