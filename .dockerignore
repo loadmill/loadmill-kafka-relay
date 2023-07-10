@@ -1,3 +1,10 @@
-.env
+.dockerignore
+.gitignore
+.env*
+.notes*
+Dockerfile
+.git/
+.vscode/
 loadmill-kafka-relay.log
-.notes.txt
+dist/
+node_modules/
