@@ -1,6 +1,7 @@
 import { Decimal } from 'decimal.js';
 
 import { ClientError } from '../errors';
+import log from '../log';
 import { Convertable, ConvertOption, ConvertType, isPrimitive } from '../types';
 
 export const convert = (
@@ -22,7 +23,7 @@ export const convert = (
         if (convertion) {
           switch (convertion.type) {
             case ConvertType.DECIMAL:
-              obj[key] = toDecimal(value);
+              convertToDecimal(key, value, obj);
               break;
             default:
               throw new ClientError(400, `Unknown convertion type ${convertion.type}`);
@@ -34,9 +35,10 @@ export const convert = (
   }
 };
 
-const toDecimal = (value: unknown): Decimal => {
-  if (typeof value !== 'string' || typeof value !== 'number') {
-    throw new ClientError(400, `Convertion value must be a string or a number, got ${typeof value}`);
+const convertToDecimal = (key: string, value: unknown, obj: { [key: string]: unknown }) => {
+  if (typeof value === 'string' || typeof value === 'number') {
+    obj[key] = new Decimal(value);
+  } else {
+    log.debug(`Cannot convert ${key} to Decimal, value is not a string or number`);
   }
-  return new Decimal(value);
 };

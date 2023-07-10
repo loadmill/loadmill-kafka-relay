@@ -36,7 +36,7 @@ export const produceMessage = async (
   }
 
   if (convertions) {
-    if (!message || typeof message !== 'object') {
+    if (typeof message !== 'object') {
       throw new ClientError(400, 'Message must be an object when convertions are provided');
     }
     convert(message, convertions);
