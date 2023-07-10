@@ -235,6 +235,12 @@ Content-Type: application/json
   "topic": "my-topic",
   "message": "Hello, Kafka!",
   // optional parameters
+  "convertions": [
+    {
+      "key": "my-key",
+      "type": "decimal"
+    }
+  ],
   "encode": {
     "subject": "my-schema",
     "version": 1
