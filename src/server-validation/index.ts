@@ -44,14 +44,30 @@ const conversions = {
   },
 };
 
+const message = {
+  additionalProperties: false,
+  type: 'object',
+  properties: {
+    key: { type: ['string'] },
+    value: { type: ['string', 'object', 'number', 'boolean', 'null'] },
+    headers: {
+      type: 'object',
+      patternProperties: {
+        '.*': { type: 'string' },
+      },
+    },
+  },
+  required: ['value'],
+};
+
 export const produceValidationSchema: FastifySchema = {
   body: {
     additionalProperties: false,
     type: 'object',
     properties: {
       brokers,
-      message: { type: ['string', 'object'] },
       topic,
+      message,
       conversions,
       encode,
       sasl,
