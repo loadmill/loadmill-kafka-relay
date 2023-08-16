@@ -22,7 +22,7 @@ export type ProduceParams = SubscribeParams & {
 export type ProduceMessage = {
   headers?: { [key: string]: string };
   key?: string;
-  value: string | object;
+  value: Convertable;
 };
 
 export type Primitive = string | number | boolean;
