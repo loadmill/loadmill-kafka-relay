@@ -1,9 +1,11 @@
 import { Kafka, Partitioners, RecordMetadata } from 'kafkajs';
 
 import { APP_NAME } from '../constants';
+import { ClientError } from '../errors';
 import { ProduceOptions, ProduceParams } from '../types';
 
 import { prepareBrokers } from './brokers';
+import { convert } from './convert';
 import { kafkaLogCreator } from './log-creator';
 import {
   encode,
@@ -14,7 +16,7 @@ import {
 
 export const produceMessage = async (
   { brokers, message, topic }: ProduceParams,
-  { encode: encodeOptions, sasl, ssl }: ProduceOptions,
+  { conversions, encode: encodeOptions, sasl, ssl }: ProduceOptions,
 ): Promise<RecordMetadata> => {
   const kafka = new Kafka({
     brokers: prepareBrokers(brokers),
@@ -31,6 +33,13 @@ export const produceMessage = async (
   const currentActiveSchemaId = getActiveSchemaId();
   if (encodeOptions) {
     await setEncodeSchema(encodeOptions);
+  }
+
+  if (conversions) {
+    if (typeof message !== 'object') {
+      throw new ClientError(400, 'Message must be an object when conversions are provided');
+    }
+    convert(message, conversions);
   }
 
   const [recordMetaData] = await producer.send({

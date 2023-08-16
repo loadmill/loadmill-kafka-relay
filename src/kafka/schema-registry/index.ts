@@ -1,10 +1,11 @@
-import { SchemaRegistry } from '@kafkajs/confluent-schema-registry';
+import { SchemaRegistry, SchemaType } from '@kafkajs/confluent-schema-registry';
+import { AvroDecimal } from '@ovotech/avro-decimal';
 import { CompressionCodecs, CompressionTypes } from 'kafkajs';
 import LZ4 from 'kafkajs-lz4';
 
 import { ClientError } from '../../errors';
 import log from '../../log';
-import { EncodeSchemaOptions, RegistryOptions } from '../../types';
+import { Convertable, EncodeSchemaOptions, RegistryOptions } from '../../types';
 
 let schemaRegistry: SchemaRegistry;
 let activeSchemaId: number;
@@ -50,7 +51,10 @@ export const initSchemaRegistry = async ({ url, auth, encode }: RegistryOptions)
   let message = 'Schema registry already initialized';
   if (url && url !== latestUrl) {
     message = `Initializing schema registry at ${url}`;
-    schemaRegistry = new SchemaRegistry({ auth, host: url });
+    schemaRegistry = new SchemaRegistry(
+      { auth, host: url },
+      { [SchemaType.AVRO]: { logicalTypes: { decimal: AvroDecimal } } },
+    );
     log.info(message);
     latestUrl = url;
   }
@@ -78,7 +82,7 @@ export const decode = async (encodedValue: Buffer): Promise<string | undefined> 
   return await schemaRegistry?.decode(encodedValue);
 };
 
-export const encode = async (value: string | object): Promise<Buffer | undefined> => {
+export const encode = async (value: string | Convertable): Promise<Buffer | undefined> => {
   if (activeSchemaId) {
     return await schemaRegistry?.encode(activeSchemaId, value);
   }
