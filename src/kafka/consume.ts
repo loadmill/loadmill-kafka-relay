@@ -1,7 +1,7 @@
 import { TRUE_AS_STRING_VALUES } from '../constants';
 import { ClientError } from '../errors';
 import log from '../log';
-import { ConsumeOptions, ConsumeParams, KafkaMessages } from '../types';
+import { ConsumedMessage, ConsumeOptions, ConsumeParams } from '../types';
 
 import { getConnection } from './connections';
 
@@ -11,8 +11,8 @@ const WAIT_INTERVAL_MS = 2 * SECOND_MS;
 
 export const consume = async (
   { id }: ConsumeParams,
-  { multiple, regexFilter, timeout }: ConsumeOptions,
-): Promise<KafkaMessages> => {
+  { multiple, regexFilter, text, timeout }: ConsumeOptions,
+): Promise<ConsumedMessage[]> => {
   const res = await getMessagesOrTimeout(
     getConnection(id).messages,
     {
@@ -28,17 +28,17 @@ export const consume = async (
       'Maybe the topic you provided when subscribing is either empty or not spelled correctly?';
     throw new ClientError(404, msg);
   }
-  return res;
+  return handleTextOption(res, text);
 };
 
 const getMessagesOrTimeout = async (
-  messages: KafkaMessages,
+  messages: ConsumedMessage[],
   {
     multiple,
     regexFilter,
     timeout,
   }: MessageOrTimeoutOptions,
-): Promise<KafkaMessages | undefined> => {
+): Promise<ConsumedMessage[] | undefined> => {
   const startTime = Date.now();
   let res;
   let elapsedTime = 0;
@@ -58,14 +58,14 @@ const getMessagesOrTimeout = async (
 
 type MessageOrTimeoutOptions = Pick<ConsumeOptions, 'multiple' | 'regexFilter' | 'timeout'>;
 
-const findMessageByRegex = (messages: KafkaMessages, regexFilter?: string, multiple?: number): KafkaMessages | undefined => {
+const findMessageByRegex = (messages: ConsumedMessage[], regexFilter?: string, multiple?: number): ConsumedMessage[] | undefined => {
   if (regexFilter) {
     messages = filterMessages(messages, regexFilter);
   }
   return getLatestNMessages(messages, multiple);
 };
 
-const filterMessages = (messages: KafkaMessages, regexFilter: string) => {
+const filterMessages = (messages: ConsumedMessage[], regexFilter: string) => {
   log.debug({ messages, regexFilter }, 'Filtering messages by regex');
   const regex = new RegExp(regexFilter);
   const filteredMessages = messages.filter((message) => regex.test(message.value || ''));
@@ -73,7 +73,7 @@ const filterMessages = (messages: KafkaMessages, regexFilter: string) => {
   return messages;
 };
 
-const getLatestNMessages = (messages: KafkaMessages, n: number = 1): KafkaMessages | undefined => {
+const getLatestNMessages = (messages: ConsumedMessage[], n: number = 1): ConsumedMessage[] | undefined => {
   if (messages.length > 0) {
     return n >= messages.length ?
       messages :
@@ -87,4 +87,24 @@ const delay = (timeout: number): Promise<unknown> => {
 
 export const isTruthyString = (value?: string): boolean => {
   return TRUE_AS_STRING_VALUES.some((b) => b === value);
+};
+
+const handleTextOption = (consumed: ConsumedMessage[], text?: string ): ConsumedMessage[] => {
+  const messages = [];
+  if (isTruthyString(text)) {
+    messages.push(...consumed);
+  } else {
+    for (const m of consumed) {
+      try {
+        const parsed = JSON.parse(m.value as string);
+        messages.push({
+          ...m,
+          value: parsed,
+        });
+      } catch (e) {
+        messages.push(m);
+      }
+    }
+  }
+  return messages;
 };

@@ -4,7 +4,7 @@ import { APP_NAME } from './constants';
 import { ClientError } from './errors';
 import { injectEnvVars } from './inject-env';
 import { getConnection } from './kafka/connections';
-import { consume, isTruthyString } from './kafka/consume';
+import { consume } from './kafka/consume';
 import { produceMessage } from './kafka/produce';
 import { initSchemaRegistry, setEncodeSchema } from './kafka/schema-registry';
 import { subscribe } from './kafka/subscribe';
@@ -50,10 +50,11 @@ app.post('/subscribe', {
 app.get('/consume/:id', { schema: consumeValidationSchema }, async (request, reply) => {
   const { id } = request.params as { id: string };
 
-  const { filter: regexFilter, multiple, text, timeout } = request.query as { filter?: string, multiple?: number, text?: string; timeout?: number };
+  const { filter: regexFilter, multiple, text, timeout } = request.query as { filter?: string; multiple?: number; text?: string; timeout?: number };
   const consumeOptions = {
     multiple,
     regexFilter,
+    text,
     timeout,
   } as ConsumeOptions;
 
@@ -61,25 +62,9 @@ app.get('/consume/:id', { schema: consumeValidationSchema }, async (request, rep
     throw new ClientError(404, `No connection found for id ${id}`);
   }
 
-  const consumed = await consume({ id }, consumeOptions);
+  const messages = await consume({ id }, consumeOptions);
   reply.type('application/json').code(200);
 
-  const messages = [];
-  if (isTruthyString(text)) {
-    messages.push(...consumed);
-  } else {
-    for (const m of consumed) {
-      try {
-        const parsed = JSON.parse(m.value as string);
-        messages.push({
-          ...m,
-          value: parsed,
-        });
-      } catch (e) {
-        messages.push(m);
-      }
-    }
-  }
   return {
     messages,
   };

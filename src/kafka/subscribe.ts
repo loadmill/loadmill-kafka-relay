@@ -1,9 +1,9 @@
 import { randomUUID } from 'crypto';
 
-import { Kafka } from 'kafkajs';
+import { Kafka, KafkaMessage } from 'kafkajs';
 
 import { APP_NAME } from '../constants';
-import { SubscribeOptions, SubscribeParams } from '../types';
+import { ConsumedMessage, SubscribeOptions, SubscribeParams } from '../types';
 
 import { prepareBrokers } from './brokers';
 import { addConnection } from './connections';
@@ -28,13 +28,26 @@ export const subscribe = async (
   await consumer.subscribe({ fromBeginning: true, topic });
   await consumer.run({
     eachMessage: async ({ message }) => {
-      const value = await decode(message.value as Buffer) || message.value?.toString() || '';
-
-      connection.messages.push({
-        ...message,
-        value,
-      });
+      connection.messages.push(
+        await fromKafkaToConsumedMessage(message),
+      );
     },
   });
   return { id };
+};
+
+const fromKafkaToConsumedMessage = async (message: KafkaMessage): Promise<ConsumedMessage> => {
+  const value = await decode(message.value as Buffer) || message.value?.toString() || '';
+  const key = message.key == null ? null : message.key.toString();
+  const headers = Object.entries(message.headers || {}).reduce((acc, [key, value]) => {
+    acc[key] = value?.toString();
+    return acc;
+  }, {} as { [key: string]: string | undefined });
+
+  return {
+    ...message,
+    headers,
+    key,
+    value,
+  };
 };

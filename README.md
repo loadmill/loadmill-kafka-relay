@@ -206,7 +206,10 @@ To produce a message to a Kafka topic, send a POST request to the `/produce` end
 - Required Parameters:
   - `brokers` (array of strings): The list of Kafka brokers.
   - `topic` (string): The Kafka topic to which the message will be produced.
-  - `message` (string or object): The message to be produced.
+  - `message` (object): The message to be produced.
+    - `value` (string): The value of the message.
+    - `key` (string, optional): The key of the message.
+    - `headers` (object, optional): The headers of the message.
 - Optional Parameters:
   - `conversions` (array, optional): Options for certain keys inside the message. Each item in the array should be an object with the following keys:
     - `key` (string): The key to convert.

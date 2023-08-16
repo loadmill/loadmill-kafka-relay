@@ -8,7 +8,7 @@ export type Connections = {
 
 export type Subscriber = {
   consumer: Consumer;
-  messages: KafkaMessages;
+  messages: ConsumedMessage[];
   timeOfSubscription: number; // unix timestamp (Date.now())
   topic: string;
 };
@@ -16,7 +16,13 @@ export type Subscriber = {
 export type KafkaMessages = (Omit<KafkaMessage, 'value'> & { value?: string })[];
 
 export type ProduceParams = SubscribeParams & {
-  message: string | Convertable;
+  message: ProduceMessage;
+};
+
+export type ProduceMessage = {
+  headers?: { [key: string]: string };
+  key?: string;
+  value: Convertable;
 };
 
 export type Primitive = string | number | boolean;
@@ -48,13 +54,19 @@ export type SubscribeOptions = Pick<KafkaConfig, 'sasl' | 'ssl'>;
 
 export type ConsumeParams = {
   id: UUID | string;
-}
+};
 
 export type ConsumeOptions = {
   multiple?: number;
   regexFilter?: string;
-  text?: boolean;
+  text?: string; // 'true', 'false', 'TRUE', 'FALSE', 'True', 'False', '1', '0'
   timeout?: number; /** in seconds */
+};
+
+export type ConsumedMessage = {
+  headers?: { [key: string]: string | undefined };
+  key?: string | null;
+  value: string;
 };
 
 export type RegistryOptions = {

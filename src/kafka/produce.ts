@@ -2,7 +2,7 @@ import { Kafka, Partitioners, RecordMetadata } from 'kafkajs';
 
 import { APP_NAME } from '../constants';
 import { ClientError } from '../errors';
-import { ProduceOptions, ProduceParams } from '../types';
+import { ProduceMessage, ProduceOptions, ProduceParams } from '../types';
 
 import { prepareBrokers } from './brokers';
 import { convert } from './convert';
@@ -43,9 +43,7 @@ export const produceMessage = async (
   }
 
   const [recordMetaData] = await producer.send({
-    messages: [
-      { value: await encode(message) || JSON.stringify(message) },
-    ],
+    messages: [await prepareProduceMessage(message)],
     topic,
   });
 
@@ -55,4 +53,13 @@ export const produceMessage = async (
 
   await producer.disconnect();
   return recordMetaData;
+};
+
+const prepareProduceMessage = async (message: ProduceMessage) => {
+  const { key, value, headers } = message;
+  return {
+    headers,
+    key,
+    value: await encode(value) || JSON.stringify(value),
+  };
 };
