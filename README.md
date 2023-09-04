@@ -211,9 +211,10 @@ To produce a message to a Kafka topic, send a POST request to the `/produce` end
     - `key` (string, optional): The key of the message.
     - `headers` (object, optional): The headers of the message.
 - Optional Parameters:
-  - `conversions` (array, optional): Options for certain keys inside the message. Each item in the array should be an object with the following keys:
+  - `conversions` (array, optional): Options for certain keys inside the message value and headers. Currently supports only `decimal` and `bytes` conversions. (Note: For `bytes` conversion, the value must be an encoded base64 string. See example below.)
+    Each item in the array should be an object with the following keys:
     - `key` (string): The key to convert.
-    - `type` (string): The type to convert the key to. Can be one of the following: `decimal`, (currently only supports `decimal`).
+    - `type` (string): The type to convert the key to. Can be one of the following: `decimal`, `bytes`.
   - `encode` (object, optional): Options for schema encoding.
     - `subject` (string): The subject of the schema.
     - `version` (number, optional): The version of the schema.
@@ -236,12 +237,22 @@ Content-Type: application/json
   // required parameters
   "brokers": ["kafka1.example.com:9092", "kafka2.example.com:9092"],
   "topic": "my-topic",
-  "message": "Hello, Kafka!",
+  "message": {
+    "value": "Hello, Kafka!",
+    "key": "my-key",
+    "headers": {
+      "my-header": "${__encode_base64(my-header-value)}" // __encode_base64 is a Loadmill function
+    }
+  }
   // optional parameters
   "conversions": [
     {
       "key": "my-key",
       "type": "decimal"
+    },
+    {
+      "key": "my-header",
+      "type": "bytes"
     }
   ],
   "encode": {

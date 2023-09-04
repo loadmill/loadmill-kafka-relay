@@ -38,7 +38,7 @@ const conversions = {
     type: 'object',
     properties: {
       key: { type: 'string' },
-      type: { type: 'string', enum: ['decimal'] },
+      type: { type: 'string', enum: ['bytes', 'decimal'] },
     },
     required: ['key', 'type'],
   },

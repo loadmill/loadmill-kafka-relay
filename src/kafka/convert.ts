@@ -25,6 +25,9 @@ export const convert = (
             case ConvertType.DECIMAL:
               convertToDecimal(key, value, obj);
               break;
+            case ConvertType.BYTES:
+              convertToBytes(value, obj, key);
+              break;
             default:
               throw new ClientError(400, `Unknown convertion type ${convertion.type}`);
           }
@@ -41,4 +44,16 @@ const convertToDecimal = (key: string, value: unknown, obj: { [key: string]: unk
   } else {
     log.debug(`Cannot convert ${key} to Decimal, value is not a string or number`);
   }
+};
+
+const convertToBytes = (value: unknown, obj: { [key: string]: unknown }, key: string) => {
+  if (typeof value === 'string') {
+    obj[key] = base64ToBytes(value);
+  } else {
+    log.debug(`Cannot convert ${key} to Buffer, value is not a string`);
+  }
+};
+
+const base64ToBytes = (based64Value: string): Buffer => {
+  return Buffer.from(based64Value, 'base64');
 };
