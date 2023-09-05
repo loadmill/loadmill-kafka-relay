@@ -7,7 +7,7 @@
   "scripts": {
     "build": "yarn clean && yarn lint && tsc",
     "clean": "rimraf ./dist",
-    "dev": "nodemon src",
+    "dev": "nodemon src/index.ts",
     "dev:watch": "nodemon --inspect=0.0.0.0:9221 src/index.ts",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx --color",
     "start": "node dist",

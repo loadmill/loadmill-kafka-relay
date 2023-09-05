@@ -42,6 +42,7 @@ export type ConvertOption = {
 };
 
 export enum ConvertType {
+  BYTES = 'bytes',
   DECIMAL = 'decimal',
 }
 

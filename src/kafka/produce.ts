@@ -1,7 +1,6 @@
 import { Kafka, Partitioners, RecordMetadata } from 'kafkajs';
 
 import { APP_NAME } from '../constants';
-import { ClientError } from '../errors';
 import { ProduceMessage, ProduceOptions, ProduceParams } from '../types';
 
 import { prepareBrokers } from './brokers';
@@ -36,10 +35,8 @@ export const produceMessage = async (
   }
 
   if (conversions) {
-    if (typeof message !== 'object') {
-      throw new ClientError(400, 'Message must be an object when conversions are provided');
-    }
-    convert(message, conversions);
+    convert(message.value, conversions);
+    convert(message.headers, conversions);
   }
 
   const [recordMetaData] = await producer.send({
