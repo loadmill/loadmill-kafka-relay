@@ -2,12 +2,11 @@ import { UUID } from 'crypto';
 
 import { Consumer, KafkaConfig, KafkaMessage } from 'kafkajs';
 
-export type Connections = {
-  [id: string]: Subscriber;
-};
+export type Subscriptions = Subscription[];
 
-export type Subscriber = {
+export type Subscription = {
   consumer: Consumer;
+  id: string;
   messages: ConsumedMessage[];
   timeOfSubscription: number; // unix timestamp (Date.now())
   topic: string;

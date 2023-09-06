@@ -1,12 +1,12 @@
 import 'dotenv/config';
 
-import { startCloseOldConnectionsInterval } from './kafka/connections';
 import {
   handleKafkaCompressionEnvVars,
   handleKafkaRegistryEnvVars,
 } from './kafka/schema-registry';
+import { startTimeoutSubscriptionInterval } from './kafka/subscriptions';
 
-startCloseOldConnectionsInterval();
+startTimeoutSubscriptionInterval();
 
 handleKafkaCompressionEnvVars();
 

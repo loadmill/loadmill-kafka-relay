@@ -3,11 +3,11 @@ import Fastify from 'fastify';
 import { APP_NAME } from './constants';
 import { ClientError } from './errors';
 import { injectEnvVars } from './inject-env';
-import { getConnection } from './kafka/connections';
 import { consume } from './kafka/consume';
 import { produceMessage } from './kafka/produce';
 import { initSchemaRegistry, setEncodeSchema } from './kafka/schema-registry';
 import { subscribe } from './kafka/subscribe';
+import { getSubscription } from './kafka/subscriptions';
 import log from './log';
 import { serverErrorHandler } from './server-errors';
 import {
@@ -58,8 +58,8 @@ app.get('/consume/:id', { schema: consumeValidationSchema }, async (request, rep
     timeout,
   } as ConsumeOptions;
 
-  if (!getConnection(id)) {
-    throw new ClientError(404, `No connection found for id ${id}`);
+  if (!getSubscription(id)) {
+    throw new ClientError(404, `No subscription found for id ${id}`);
   }
 
   const messages = await consume({ id }, consumeOptions);
