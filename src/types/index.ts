@@ -2,8 +2,6 @@ import { UUID } from 'crypto';
 
 import { Consumer, KafkaConfig, KafkaMessage } from 'kafkajs';
 
-export type Subscriptions = Subscription[];
-
 export type Subscription = {
   consumer: Consumer;
   id: string;

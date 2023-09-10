@@ -16,6 +16,7 @@
   "devDependencies": {
     "@types/node": "^18.16.3",
     "@types/qs": "^6.9.7",
+    "@types/redis": "^4.0.11",
     "@typescript-eslint/eslint-plugin": "^5.59.11",
     "@typescript-eslint/parser": "^5.59.11",
     "eslint": "^8.43.0",
@@ -46,6 +47,7 @@
     "pino": "^8.14.1",
     "pino-pretty": "^10.0.0",
     "qs": "^6.11.1",
+    "redis": "^4.6.8",
     "ts-jest": "^29.1.1",
     "uri-js": "^4.4.1"
   }

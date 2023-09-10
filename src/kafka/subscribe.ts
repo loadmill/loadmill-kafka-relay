@@ -3,6 +3,7 @@ import { randomUUID } from 'crypto';
 import { Kafka, KafkaMessage } from 'kafkajs';
 
 import { APP_NAME } from '../constants';
+import log from '../log';
 import { ConsumedMessage, SubscribeOptions, SubscribeParams } from '../types';
 
 import { prepareBrokers } from './brokers';
@@ -38,6 +39,7 @@ export const subscribe = async (
 
 const fromKafkaToConsumedMessage = async (message: KafkaMessage): Promise<ConsumedMessage> => {
   const value = await decode(message.value as Buffer) || message.value?.toString() || '';
+  log.debug({ timeStamp: message.timestamp }, 'Received message from Kafka');
   const key = message.key == null ? null : message.key.toString();
   const headers = Object.entries(message.headers || {}).reduce((acc, [key, value]) => {
     acc[key] = value?.toString();
