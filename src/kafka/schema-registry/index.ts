@@ -7,6 +7,8 @@ import { ClientError } from '../../errors';
 import log from '../../log';
 import { Convertable, EncodeSchemaOptions, RegistryOptions } from '../../types';
 
+import { longType } from './avro-types/long';
+
 let schemaRegistry: SchemaRegistry;
 let activeSchemaId: number;
 let latestUrl: string;
@@ -53,7 +55,10 @@ export const initSchemaRegistry = async ({ url, auth, encode }: RegistryOptions)
     message = `Initializing schema registry at ${url}`;
     schemaRegistry = new SchemaRegistry(
       { auth, host: url },
-      { [SchemaType.AVRO]: { logicalTypes: { decimal: AvroDecimal } } },
+      { [SchemaType.AVRO]: {
+        logicalTypes: { decimal: AvroDecimal },
+        registry: { 'long': longType },
+      } },
     );
     log.info(message);
     latestUrl = url;
