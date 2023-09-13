@@ -5,7 +5,7 @@ import LZ4 from 'kafkajs-lz4';
 
 import { ClientError } from '../../errors';
 import log from '../../log';
-import { Convertable, EncodeSchemaOptions, RegistryOptions } from '../../types';
+import { EncodeSchemaOptions, RegistryOptions } from '../../types';
 
 let schemaRegistry: SchemaRegistry;
 let activeSchemaId: number;
@@ -20,24 +20,24 @@ export const setActiveSchemaId = (id: number): void => {
 
 export const handleKafkaRegistryEnvVars = (): void => {
   if (process.env.LOADMILL_KAFKA_SCHEMA_REGISTRY_URL) {
-    const schemaRegistry: RegistryOptions = {
+    const registryOptions: RegistryOptions = {
       url: process.env.LOADMILL_KAFKA_SCHEMA_REGISTRY_URL,
     };
     if (process.env.LOADMILL_KAFKA_SCHEMA_REGISTRY_USERNAME && process.env.LOADMILL_KAFKA_SCHEMA_REGISTRY_PASSWORD) {
-      schemaRegistry.auth = {
+      registryOptions.auth = {
         password: process.env.LOADMILL_KAFKA_SCHEMA_REGISTRY_PASSWORD,
         username: process.env.LOADMILL_KAFKA_SCHEMA_REGISTRY_USERNAME,
       };
     }
     if (process.env.LOADMILL_KAFKA_SCHEMA_SUBJECT) {
-      schemaRegistry.encode = {
+      registryOptions.encode = {
         subject: process.env.LOADMILL_KAFKA_SCHEMA_SUBJECT,
       };
       if (process.env.LOADMILL_KAFKA_SCHEMA_VERSION) {
-        schemaRegistry.encode.version = Number(process.env.LOADMILL_KAFKA_SCHEMA_VERSION);
+        registryOptions.encode.version = Number(process.env.LOADMILL_KAFKA_SCHEMA_VERSION);
       }
     }
-    initSchemaRegistry(schemaRegistry);
+    initSchemaRegistry(registryOptions);
   }
 };
 
@@ -71,21 +71,31 @@ export const setEncodeSchema = async (encodeSchemaOptions: EncodeSchemaOptions):
     throw new ClientError(400, 'Schema registry not initialized. Hint: call POST /registry first');
   }
   const { subject, version } = encodeSchemaOptions;
-  log.info(`Setting encode schema with subject: ${subject}, version: ${version ? version.toString() : 'latest'}`);
-  if (!version) {
-    activeSchemaId = await schemaRegistry.getLatestSchemaId(subject);
-  } else {
-    activeSchemaId = await schemaRegistry.getRegistryId(subject, version);
-  }
-  log.info(`Active Schema id set to ${activeSchemaId}`);
+  const activeSchemaId = await getSchemaRegistryId(subject, version);
+  log.info(`Encode schema set. subject: ${subject}, version: ${version ? version.toString() : 'latest'}, Registry id: ${activeSchemaId}`);
 };
 
 export const decode = async (encodedValue: Buffer): Promise<string | undefined> => {
   return await schemaRegistry?.decode(encodedValue);
 };
 
-export const encode = async (value: string | Convertable): Promise<Buffer | undefined> => {
+export const encode = async (value: unknown, options?: EncodeSchemaOptions): Promise<Buffer | undefined> => {
+  if (options) {
+    const { subject, version } = options;
+    const registryId = await getSchemaRegistryId(subject, version);
+    return await schemaRegistry?.encode(registryId, value);
+  }
   if (activeSchemaId) {
     return await schemaRegistry?.encode(activeSchemaId, value);
   }
+};
+
+const getSchemaRegistryId = async (subject: string, version?: number | string): Promise<number> => {
+  if (!schemaRegistry) {
+    throw new ClientError(400, 'Schema registry not initialized. Hint: call POST /registry first');
+  }
+  if (version) {
+    return await schemaRegistry.getRegistryId(subject, version);
+  }
+  return await schemaRegistry.getLatestSchemaId(subject);
 };

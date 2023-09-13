@@ -30,8 +30,27 @@ const encode = {
   required: ['subject'],
 };
 
-const conversions = {
+const validHeaderNameRegex = '^[0-9A-Za-z_^`|~!#$%&\'*+\-.]+$';
+
+const headersEncode = {
+  type: 'object',
+  patternProperties: {
+    [validHeaderNameRegex]: {
+      type: 'object',
+    },
+  },
+};
+
+const encodeProduce = {
   additionalProperties: false,
+  type: 'object',
+  properties: {
+    headers: headersEncode,
+    value: encode,
+  },
+};
+
+const conversions = {
   type: 'array',
   items: {
     additionalProperties: false,
@@ -53,7 +72,7 @@ const message = {
     headers: {
       type: 'object',
       patternProperties: {
-        '.*': { type: 'string' },
+        [validHeaderNameRegex]: { type: ['string', 'object', 'number', 'boolean', 'null'] },
       },
     },
   },
@@ -69,7 +88,7 @@ export const produceValidationSchema: FastifySchema = {
       topic,
       message,
       conversions,
-      encode,
+      encode: encodeProduce,
       sasl,
       ssl,
     },

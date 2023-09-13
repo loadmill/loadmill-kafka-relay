@@ -14,6 +14,7 @@ module.exports = {
     {
       files: ['src/server-validation/index.ts'],
       rules: {
+        'no-useless-escape': 'off',
         'sort-keys': 'off',
       },
     },

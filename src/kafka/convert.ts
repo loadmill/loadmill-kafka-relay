@@ -8,7 +8,7 @@ export const convert = (
   obj: Convertable,
   conversions: ConvertOption[],
 ): void => {
-  if (obj === null || obj === undefined) {
+  if (obj == null) {
     return;
   } else if (isPrimitive(obj)) {
     return;
