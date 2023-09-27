@@ -1,0 +1,13 @@
+diff --git a/node_modules/avsc/lib/types.js b/node_modules/avsc/lib/types.js
+index f4d644e..bdeeb5e 100644
+--- a/node_modules/avsc/lib/types.js
++++ b/node_modules/avsc/lib/types.js
+@@ -3016,7 +3016,7 @@ function readArraySize(tap) {
+  * + We must remove one from each bound because of rounding errors.
+  */
+ function isSafeLong(n) {
+-  return n >= -9007199254740990 && n <= 9007199254740990;
++  return typeof n == 'number';
+ }
+ 
+ /**
