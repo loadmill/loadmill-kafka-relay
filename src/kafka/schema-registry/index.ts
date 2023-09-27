@@ -76,7 +76,12 @@ export const setEncodeSchema = async (encodeSchemaOptions: EncodeSchemaOptions):
 };
 
 export const decode = async (encodedValue: Buffer): Promise<string | undefined> => {
-  return await schemaRegistry?.decode(encodedValue);
+  try {
+    return await schemaRegistry?.decode(encodedValue);
+  } catch (error) {
+    log.warn('Error decoding message');
+    log.error(error);
+  }
 };
 
 export const encode = async (value: unknown, options?: EncodeSchemaOptions): Promise<Buffer | undefined> => {

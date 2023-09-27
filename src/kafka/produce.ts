@@ -54,7 +54,7 @@ const prepareProduceMessage = async (message: ProduceMessage, options: ProduceOp
 
   return {
     headers: await prepareHeaders(headers, encodeOptions),
-    key,
+    key: key || null,
     value: await prepareValue(value, encodeOptions),
   };
 };

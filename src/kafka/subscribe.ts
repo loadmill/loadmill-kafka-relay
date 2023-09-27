@@ -37,12 +37,16 @@ export const subscribe = async (
 };
 
 const fromKafkaToConsumedMessage = async (message: KafkaMessage): Promise<ConsumedMessage> => {
-  const value = await decode(message.value as Buffer) || message.value?.toString() || '';
+  const decodedValue = await decode(message.value as Buffer);
+  const stringifiedValue = message.value?.toString();
+  const value = decodedValue || stringifiedValue || '';
   const key = message.key == null ? null : message.key.toString();
-  const headers = Object.entries(message.headers || {}).reduce((acc, [key, value]) => {
-    acc[key] = value?.toString();
-    return acc;
-  }, {} as { [key: string]: string | undefined });
+  const headers = {} as {
+    [key: string]: string | undefined;
+  };
+  for (const [key, value] of Object.entries(message.headers || {})) {
+    headers[key] = await decode(value as Buffer) || value?.toString();
+  }
 
   return {
     ...message,
