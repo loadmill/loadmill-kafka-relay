@@ -1,4 +1,5 @@
 import { SchemaRegistry, SchemaType } from '@kafkajs/confluent-schema-registry';
+import { ConfluentSchemaRegistryArgumentError } from '@kafkajs/confluent-schema-registry/dist/errors';
 import { AvroDecimal } from '@ovotech/avro-decimal';
 import { CompressionCodecs, CompressionTypes } from 'kafkajs';
 import LZ4 from 'kafkajs-lz4';
@@ -79,8 +80,18 @@ export const decode = async (encodedValue: Buffer): Promise<string | undefined> 
   try {
     return await schemaRegistry?.decode(encodedValue);
   } catch (error) {
-    log.warn('Error decoding message');
-    log.error(error);
+    if (
+      error instanceof ConfluentSchemaRegistryArgumentError &&
+      error.message.includes('Message encoded with magic byte {"type":"Buffer","data":[')
+      ||
+      error instanceof Error &&
+      error.message.includes('Attempt to access memory outside buffer bounds')
+    ) {
+      log.debug({ encodedValue: encodedValue.toString() }, 'Error decoding value, it probably wasnt encoded with schema.');
+      log.debug(error);
+    } else {
+      throw error;
+    }
   }
 };
 
