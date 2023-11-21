@@ -1,7 +1,7 @@
 
 import { EncodeProduceOptions, ProduceMessage } from '../types';
 
-import { deepModifyObject } from './object-traverse';
+import { deepModifyObject } from './deep-modify-object';
 import { encode } from './schema-registry';
 
 export const encodeHeaders = async (headers: ProduceMessage['headers'], encodeOptions?: EncodeProduceOptions): Promise<void> => {
