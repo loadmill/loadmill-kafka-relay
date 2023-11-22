@@ -216,8 +216,13 @@ To produce a message to a Kafka topic, send a POST request to the `/produce` end
     - `key` (string): The key to convert.
     - `type` (string): The type to convert the key to. Can be one of the following: `decimal`, `bytes`.
   - `encode` (object, optional): Options for schema encoding.
-    - `subject` (string): The subject of the schema.
-    - `version` (number, optional): The version of the schema.
+    - `value` (object, optional): Options for encoding the message value.
+      - `subject` (string): The subject of the schema.
+      - `version` (number, optional): The version of the schema.
+    - `headers` (object, optional): Options for encoding the message headers.
+      - `key` (string): The key of the header to encode.
+        - `subject` (string): The subject of the schema.
+        - `version` (number, optional): The version of the schema.
   - `ssl` (boolean, optional): Whether to use SSL for the Kafka brokers.
   - `sasl` (object, optional): SASL authentication credentials for the Kafka brokers.
     - `mechanism` (string): The SASL mechanism to use for authentication.

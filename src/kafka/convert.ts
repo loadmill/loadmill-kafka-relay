@@ -2,38 +2,35 @@ import { Decimal } from 'decimal.js';
 
 import { ClientError } from '../errors';
 import log from '../log';
-import { Convertable, ConvertOption, ConvertType, isPrimitive } from '../types';
+import { Convertable, ConvertOption, ConvertType } from '../types';
 
-export const convert = (
-  obj: Convertable,
+import { deepModifyObject } from './deep-modify-object';
+
+export const convert = (obj: Convertable, conversions: ConvertOption[]): void => {
+  deepModifyObject(
+    obj,
+    (key: string, value: unknown, obj: { [key: string]: unknown }) =>
+      _convert(key, value, obj, conversions),
+  );
+};
+
+const _convert = (
+  key: string,
+  value: unknown,
+  obj: { [key: string]: unknown },
   conversions: ConvertOption[],
-): void => {
-  if (obj === null || obj === undefined) {
-    return;
-  } else if (isPrimitive(obj)) {
-    return;
-  } else if (Array.isArray(obj)) {
-    for (const item of obj) {
-      convert(item, conversions);
-    }
-  } else if (typeof obj === 'object') {
-    for (const [key, value] of Object.entries(obj)) {
-      if (obj.hasOwnProperty(key)) {
-        const convertion = conversions.find((c) => c.key === key);
-        if (convertion) {
-          switch (convertion.type) {
-            case ConvertType.DECIMAL:
-              convertToDecimal(key, value, obj);
-              break;
-            case ConvertType.BYTES:
-              convertToBytes(value, obj, key);
-              break;
-            default:
-              throw new ClientError(400, `Unknown convertion type ${convertion.type}`);
-          }
-        }
-      }
-      convert(value as { [key: string]: unknown }, conversions);
+) => {
+  const convertion = conversions.find((c) => c.key === key);
+  if (convertion) {
+    switch (convertion.type) {
+      case ConvertType.DECIMAL:
+        convertToDecimal(key, value, obj);
+        break;
+      case ConvertType.BYTES:
+        convertToBytes(value, obj, key);
+        break;
+      default:
+        throw new ClientError(400, `Unknown convertion type ${convertion.type}`);
     }
   }
 };

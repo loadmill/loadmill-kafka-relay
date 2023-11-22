@@ -1,6 +1,6 @@
 import { UUID } from 'crypto';
 
-import { Consumer, KafkaConfig, KafkaMessage } from 'kafkajs';
+import { Consumer, IHeaders, KafkaConfig, KafkaMessage } from 'kafkajs';
 
 export type Connections = {
   [id: string]: Subscriber;
@@ -20,7 +20,7 @@ export type ProduceParams = SubscribeParams & {
 };
 
 export type ProduceMessage = {
-  headers?: { [key: string]: string };
+  headers: IHeaders;
   key?: string;
   value: Convertable;
 };
@@ -33,7 +33,7 @@ export type Convertable = { [key: string]: unknown } | Primitive | null | undefi
 
 export type ProduceOptions = SubscribeOptions & {
   conversions?: ConvertOption[];
-  encode?: EncodeSchemaOptions;
+  encode?: EncodeProduceOptions;
 };
 
 export type ConvertOption = {
@@ -82,4 +82,13 @@ export type RegistryOptions = {
 export type EncodeSchemaOptions = {
   subject: string;
   version?: number;
+};
+
+export type EncodeHeaderOptions = {
+  [key: string]: EncodeSchemaOptions;
+};
+
+export type EncodeProduceOptions = {
+  headers?: EncodeHeaderOptions;
+  value?: EncodeSchemaOptions;
 };

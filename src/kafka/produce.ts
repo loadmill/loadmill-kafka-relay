@@ -1,22 +1,28 @@
-import { Kafka, Partitioners, RecordMetadata } from 'kafkajs';
+import { IHeaders, Kafka, Partitioners, RecordMetadata } from 'kafkajs';
 
 import { APP_NAME } from '../constants';
-import { ProduceMessage, ProduceOptions, ProduceParams } from '../types';
+import {
+  ConvertOption,
+  EncodeProduceOptions,
+  ProduceMessage,
+  ProduceOptions,
+  ProduceParams,
+} from '../types';
 
 import { prepareBrokers } from './brokers';
 import { convert } from './convert';
+import { encodeHeaders } from './encode-headers';
 import { kafkaLogCreator } from './log-creator';
 import {
   encode,
-  getActiveSchemaId,
-  setActiveSchemaId,
-  setEncodeSchema,
 } from './schema-registry';
 
 export const produceMessage = async (
   { brokers, message, topic }: ProduceParams,
-  { conversions, encode: encodeOptions, sasl, ssl }: ProduceOptions,
+  options: ProduceOptions,
 ): Promise<RecordMetadata> => {
+  const { sasl, ssl } = options;
+
   const kafka = new Kafka({
     brokers: prepareBrokers(brokers),
     clientId: APP_NAME,
@@ -29,34 +35,44 @@ export const produceMessage = async (
   });
   await producer.connect();
 
-  const currentActiveSchemaId = getActiveSchemaId();
-  if (encodeOptions) {
-    await setEncodeSchema(encodeOptions);
-  }
-
-  if (conversions) {
-    convert(message.value, conversions);
-    convert(message.headers, conversions);
-  }
-
   const [recordMetaData] = await producer.send({
-    messages: [await prepareProduceMessage(message)],
+    messages: [await prepareProduceMessage(message, options)],
     topic,
   });
-
-  if (encodeOptions) {
-    setActiveSchemaId(currentActiveSchemaId);
-  }
 
   await producer.disconnect();
   return recordMetaData;
 };
 
-const prepareProduceMessage = async (message: ProduceMessage) => {
+const prepareProduceMessage = async (message: ProduceMessage, options: ProduceOptions) => {
   const { key, value, headers } = message;
+  const { conversions, encode: encodeOptions } = options;
+
+  if (conversions) {
+    applyConversions(message, conversions);
+  }
+
   return {
-    headers,
-    key,
-    value: await encode(value) || JSON.stringify(value),
+    headers: await prepareHeaders(headers, encodeOptions),
+    key: key || null,
+    value: await prepareValue(value, encodeOptions),
   };
 };
+
+const applyConversions = (message: ProduceMessage, conversions: ConvertOption[]) => {
+  convert(message.value, conversions);
+  convert(message.headers, conversions);
+};
+
+const prepareHeaders = async (
+  headers: ProduceMessage['headers'],
+  encodeOptions?: EncodeProduceOptions,
+): Promise<IHeaders> => {
+  await encodeHeaders(headers, encodeOptions);
+  return headers;
+};
+
+const prepareValue = async (value: ProduceMessage['value'], encodeOptions?: EncodeProduceOptions) =>
+  encodeOptions?.value ?
+    await encode(value, encodeOptions?.value) as Buffer :
+    JSON.stringify(value) as string;
