@@ -13,6 +13,7 @@ It was built to help you test your Kafka infrastructure and applications, and to
   - [Basic Usage](#basic-usage)
     - [Subscribe to a Topic](#subscribe-to-a-topic)
     - [Consume Messages](#consume-messages)
+    - [Unsubscribe from a Topic](#unsubscribe-from-a-topic)
   - [Advanced Usage](#advanced-usage)
     - [Produce a Message](#produce-a-message)
     - [Schema Registry](#schema-registry)
@@ -193,6 +194,29 @@ Example Response 4 (using multiple messages option):
 To turn on LZ4 compression codec decoding on message consuming add the following environemt variable:
 ```bash
 LOADMILL_KAFKA_LZ4_COMPRESSION_CODEC='true'
+
+```
+### Unsubscribe from a Topic
+
+Endpoint: `DELETE /subscriptions/:id`
+
+To unsubscribe from a Kafka topic, send a DELETE request to the `/subscriptions/:id` endpoint, where `:id` represents the unique identifier of the subscriptions.
+
+Example Request:
+```http
+DELETE /subscriptions/c8bf8b9b-5bb6-4f17-babd-3d027eb7ad55
+```
+```json
+{
+  "id": "c8bf8b9b-5bb6-4f17-babd-3d027eb7ad55"
+}
+```
+
+Example Response:
+```json
+{
+  "id": "c8bf8b9b-5bb6-4f17-babd-3d027eb7ad55"
+}
 ```
 
 ### Advanced Usage

@@ -5,17 +5,17 @@ import { Connections, Subscriber } from '../types';
 
 const connections: Connections = {};
 
-const MAX_OPEN_CONNECTION_TIME_MS = 10 * 1000 * 60; // 10 minutes
+const MAX_OPEN_CONNECTION_TIME_MS = 5 * 1000 * 60; // 5 minutes
 const CLOSE_CONNECTIONS_INTERVAL_MS = 1000 * 60; // 60 seconds
 
 const closeOldConnections = () => {
   const now = Date.now();
-  Object.keys(connections).forEach((id: string) => {
+  Object.keys(connections).forEach(async (id: string) => {
     const subscriber = connections[id];
     const { timeOfSubscription, consumer } = subscriber;
     if (now - timeOfSubscription > MAX_OPEN_CONNECTION_TIME_MS) {
       log.info(`Closing connection ${id}`);
-      consumer.disconnect();
+      await consumer.disconnect();
       delete connections[id];
     }
   });
@@ -36,3 +36,13 @@ export const addConnection = (id: string, consumer: Consumer, topic: string): Su
 };
 
 export const getConnection = (id: string): Subscriber => connections[id];
+
+export const removeConnection = async (id: string): Promise<string | undefined> => {
+  const subscriber = connections[id];
+  if (subscriber) {
+    const { consumer } = subscriber;
+    await consumer.disconnect();
+    delete connections[id];
+    return id;
+  }
+};
