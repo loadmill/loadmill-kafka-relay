@@ -8,9 +8,9 @@ const connections: Connections = {};
 const MAX_OPEN_CONNECTION_TIME_MS = 5 * 1000 * 60; // 5 minutes
 const CLOSE_CONNECTIONS_INTERVAL_MS = 1000 * 60; // 60 seconds
 
-const closeOldConnections = () => {
+const closeOldConnections = async () => {
   const now = Date.now();
-  Object.keys(connections).forEach(async (id: string) => {
+  await Promise.all(Object.keys(connections).map(async (id: string) => {
     const subscriber = connections[id];
     const { timeOfSubscription, consumer } = subscriber;
     if (now - timeOfSubscription > MAX_OPEN_CONNECTION_TIME_MS) {
@@ -18,7 +18,7 @@ const closeOldConnections = () => {
       await consumer.disconnect();
       delete connections[id];
     }
-  });
+  }));
 };
 
 export const startCloseOldConnectionsInterval = (): void => {
