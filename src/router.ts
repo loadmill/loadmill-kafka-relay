@@ -3,7 +3,7 @@ import Fastify from 'fastify';
 import { APP_NAME } from './constants';
 import { ClientError } from './errors';
 import { injectEnvVars } from './inject-env';
-import { getConnection } from './kafka/connections';
+import { getConnection, removeConnection } from './kafka/connections';
 import { consume } from './kafka/consume';
 import { produceMessage } from './kafka/produce';
 import { initSchemaRegistry, setEncodeSchema } from './kafka/schema-registry';
@@ -43,6 +43,19 @@ app.post('/subscribe', {
 }, async (request, reply) => {
   const { brokers, topic, sasl, ssl } = request.body as SubscribeParams & SubscribeOptions;
   const { id } = await subscribe({ brokers, topic }, { sasl, ssl });
+  reply.type('application/json').code(200);
+  return { id };
+});
+
+app.delete('/subscriptions/:id', { // unsubscribe
+}, async (request, reply) => {
+  const { id } = request.params as { id: string };
+
+  if (!getConnection(id)) {
+    throw new ClientError(404, `No connection found for id ${id}`);
+  }
+
+  await removeConnection(id);
   reply.type('application/json').code(200);
   return { id };
 });
