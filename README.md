@@ -285,8 +285,10 @@ Content-Type: application/json
     }
   ],
   "encode": {
-    "subject": "my-schema",
-    "version": 1
+    "value": {
+      "subject": "my-schema",
+      "version": 1
+    }
   },
   "ssl": true,
   "sasl": {
