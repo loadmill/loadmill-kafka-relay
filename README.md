@@ -3,6 +3,13 @@
 The [Loadmill](https://loadmill.com) Kafka Relay is a powerful Kafka client that allows you to produce and consume messages from Kafka topics easily. It provides a set of APIs to interact with Kafka brokers, manage message production, consumption, and schema registry operations.
 It was built to help you test your Kafka infrastructure and applications, and to make it easier to debug and troubleshoot Kafka-related issues.
 
+## Use Cases
+The Loadmill Kafka Relay aims to simplify the testing of services that use Kafka, a common challenge due to the complex nature of message systems. Two common use cases are:
+
+1. **Message Consumption Testing:** This involves testing the functionality of applications that produce Kafka messages. For instance, after you simulate an action like creating an order through the application's API, the relay is used to consume messages from the corresponding Kafka topic. This process allows you to verify whether the application is correctly sending the expected messages to the right topic, ensuring its proper functionality.
+
+2. **Message Production Testing:** The relay also facilitates testing the response of applications that consume Kafka messages. By producing and sending messages to a specific Kafka topic through the relay, you can observe and analyze how consumer applications behave. This helps in ensuring that these applications correctly process and react to the messages as they are intended in various scenarios.
+
 ## Table of Contents
 - [Getting Started](#getting-started)
   - [Docker](#docker)
