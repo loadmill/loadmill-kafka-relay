@@ -44,11 +44,20 @@ const convertToDecimal = (key: string, value: unknown, obj: { [key: string]: unk
 };
 
 const convertToBytes = (value: unknown, obj: { [key: string]: unknown }, key: string) => {
-  if (typeof value === 'string') {
+  if (isArrayOfNumbers(value)) {
+    obj[key] = fromIntArrayToBuffer(value);
+  } else if (typeof value === 'string') {
     obj[key] = base64ToBytes(value);
   } else {
     log.debug(`Cannot convert ${key} to Buffer, value is not a string`);
   }
+};
+
+const isArrayOfNumbers = (val: unknown): val is number[] =>
+  Array.isArray(val) && val.every((v) => typeof v === 'number');
+
+const fromIntArrayToBuffer = (array: number[]): Buffer => {
+  return Buffer.from(array);
 };
 
 const base64ToBytes = (based64Value: string): Buffer => {
