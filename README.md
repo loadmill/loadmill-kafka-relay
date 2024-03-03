@@ -242,7 +242,10 @@ To produce a message to a Kafka topic, send a POST request to the `/produce` end
     - `key` (string, optional): The key of the message.
     - `headers` (object, optional): The headers of the message.
 - Optional Parameters:
-  - `conversions` (array, optional): Options for certain keys inside the message value and headers. Currently supports only `decimal` and `bytes` conversions. (Note: For `bytes` conversion, the value must be an encoded base64 string. See example below.)
+  - `conversions` (array, optional): Options for certain keys inside the message value and headers.
+    Currently supports only `decimal` and `bytes` conversions.
+    Note: For `bytes` conversion, the value must either be an integer array representing the bytes,
+    or an encoded base64 string. See example below.
     Each item in the array should be an object with the following keys:
     - `key` (string): The key to convert.
     - `type` (string): The type to convert the key to. Can be one of the following: `decimal`, `bytes`.
@@ -270,31 +273,40 @@ Content-Type: application/json
 ```
 ```json
 {
-  // required parameters
   "brokers": ["kafka1.example.com:9092", "kafka2.example.com:9092"],
   "topic": "my-topic",
   "message": {
-    "value": "Hello, Kafka!",
+    "value": {
+      "myStringField": "Hello, Kafka!",
+      "myBytesField": [102, 117, 99, 107, 32, 72, 97, 109, 97, 115], // integer array representing the bytes
+      "myBytesField2": "${__encode_base64(my_param)", // __encode_base64 is a Loadmill function
+      "myBytesField3": "RnVjayBIYW1hcw==", // base64 encoded string
+      "myDoubleField": 123.456
+    },
     "key": "my-key",
     "headers": {
-      "my-header": "${__encode_base64(my-header-value)}" // __encode_base64 is a Loadmill function
+      "my-string-header-key-1": "my-string-header-value-1",
+      "my-encoded-header-key": {
+        "my-string-header-key-2": "my-string-header-value-2"
+      }
     }
-  }
-  // optional parameters
+  },
   "conversions": [
     {
-      "key": "my-key",
-      "type": "decimal"
-    },
-    {
-      "key": "my-header",
+      "key": "myBytesField",
       "type": "bytes"
     }
   ],
   "encode": {
     "value": {
-      "subject": "my-schema",
+      "subject": "my-value-schema",
       "version": 1
+    },
+    "headers": {
+      "my-encoded-header-key": {
+        "subject": "my-header-schema",
+        "version": 1
+      }
     }
   },
   "ssl": true,
