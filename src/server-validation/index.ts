@@ -127,7 +127,7 @@ export const consumeValidationSchema: FastifySchema = {
       multiple: {
         type: 'string',
         format: 'int32',
-        pattern: '^(?:[1-9]|10)$', // min 1, max 10
+        pattern: '^(?:[1-9]|[1-9][0-9]|100)$', // min 1, max 100
       },
       text: {
         type: 'string',
@@ -141,7 +141,7 @@ export const consumeValidationSchema: FastifySchema = {
     },
     errorMessage: {
       properties: {
-        multiple: 'Should be an integer between 1 and 10',
+        multiple: 'Should be an integer between 1 and 100',
         text: 'Should be a boolean (true/false)',
         timeout: 'Should be an integer between 5 and 25',
       },
