@@ -10,14 +10,14 @@ export const deepModifyObject = async (
     return;
   } else if (Array.isArray(obj)) {
     for (const item of obj) {
-      deepModifyObject(item, callback);
+      await deepModifyObject(item, callback);
     }
   } else if (typeof obj === 'object') {
     for (const [key, value] of Object.entries(obj)) {
-      if (obj.hasOwnProperty(key)) {
-        await callback(key, value, obj as { [key: string]: unknown });
+      if (value !== null && (typeof value === 'object' || Array.isArray(value))) {
+        await deepModifyObject(value, callback);
       } else {
-        deepModifyObject(value as { [key: string]: unknown }, callback);
+        await callback(key, value, obj as { [key: string]: unknown });
       }
     }
   }

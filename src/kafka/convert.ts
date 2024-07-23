@@ -6,15 +6,15 @@ import { Convertable, ConvertOption, ConvertType } from '../types';
 
 import { deepModifyObject } from './deep-modify-object';
 
-export const convert = (obj: Convertable, conversions: ConvertOption[]): void => {
-  deepModifyObject(
+export const convert = async (obj: Convertable, conversions: ConvertOption[]): Promise<void> => {
+  await deepModifyObject(
     obj,
-    (key: string, value: unknown, obj: { [key: string]: unknown }) =>
-      _convert(key, value, obj, conversions),
+    async (key: string, value: unknown, obj: { [key: string]: unknown }) =>
+      await _convert(key, value, obj, conversions),
   );
 };
 
-const _convert = (
+const _convert = async (
   key: string,
   value: unknown,
   obj: { [key: string]: unknown },
