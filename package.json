@@ -5,7 +5,7 @@
   "author": "Gilad Gur Andelman <gilad@loadmill.com>",
   "license": "MIT",
   "scripts": {
-    "build": "yarn clean && yarn lint && tsc",
+    "build": "yarn clean && yarn lint && tsc && yarn test",
     "clean": "rimraf ./dist",
     "dev": "nodemon src/index.ts",
     "dev:watch": "nodemon --inspect=0.0.0.0:9221 src/index.ts",
