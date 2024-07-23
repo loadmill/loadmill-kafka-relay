@@ -115,3 +115,15 @@ const getSchemaRegistryId = async (subject: string, version?: number | string): 
   }
   return await schemaRegistry.getLatestSchemaId(subject);
 };
+
+export const getSchemaRegistryData = async (): Promise<{ url: string } | undefined> => {
+  try {
+    if (schemaRegistry) {
+      return {
+        url: latestUrl,
+      };
+    }
+  } catch (error) {
+    log.error(error);
+  }
+};
