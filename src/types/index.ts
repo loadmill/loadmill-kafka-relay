@@ -57,7 +57,9 @@ export type SubscribeParams = {
   topic: string;
 };
 
-export type SubscribeOptions = Pick<KafkaConfig, 'sasl' | 'ssl'>;
+export type SubscribeOptions = Pick<KafkaConfig, 'sasl' | 'ssl'> & {
+  timestamp?: number;
+};
 
 export type ConsumeParams = {
   id: UUID | string;

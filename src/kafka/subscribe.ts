@@ -12,7 +12,7 @@ import { decode } from './schema-registry';
 
 export const subscribe = async (
   { brokers, topic }: SubscribeParams,
-  { sasl, ssl }: SubscribeOptions,
+  { sasl, ssl, timestamp }: SubscribeOptions,
 ): Promise<{ id: string }> => {
   const kafka = new Kafka({
     brokers: prepareBrokers(brokers),
@@ -25,7 +25,7 @@ export const subscribe = async (
   const consumer = kafka.consumer({ groupId: id });
   const connection = addConnection(id, consumer, topic);
   await consumer.connect();
-  const partitions = await getPartitionsByTimestamp(kafka, topic);
+  const partitions = await getPartitionsByTimestamp(kafka, topic, timestamp);
   await consumer.subscribe({ fromBeginning: false, topic });
   await consumer.run({
     eachMessage: async ({ message }) => {
@@ -38,8 +38,11 @@ export const subscribe = async (
   return { id };
 };
 
-const getPartitionsByTimestamp = async (kafka: Kafka, topic: string): Promise<PartitionOffset[]> => {
-  const timestamp = get1MinuteAgoTimestamp();
+const getPartitionsByTimestamp = async (
+  kafka: Kafka,
+  topic: string,
+  timestamp = get1MinuteAgoTimestamp(),
+): Promise<PartitionOffset[]> => {
   const admin = kafka.admin();
   await admin.connect();
   const partitions = await admin.fetchTopicOffsetsByTimestamp(topic, timestamp);
