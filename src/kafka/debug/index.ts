@@ -1,38 +1,44 @@
-import { Connections, ConsumedMessage, ShallowConnections } from '../../types';
-import { getActiveConnections } from '../connections';
+import { ConsumedMessage, ShallowSubscribers } from '../../types';
 import { getSchemaRegistryData } from '../schema-registry';
+import { getActiveSubscribers } from '../subscribers';
+import { Subscribers } from '../subscribers/subscriber';
 
 export type DebugData = {
   schemaRegistry?: {
     url: string;
   };
-  subscriptions: ShallowConnections;
+  subscriptions: ShallowSubscribers;
 };
 
 export const getDebugData = async (): Promise<DebugData> => {
   return {
     schemaRegistry: await getSchemaRegistryData(),
-    subscriptions: getSubscriptions(),
+    subscriptions: await getSubscriptions(),
   };
 };
 
-const getSubscriptions = (): ShallowConnections => {
-  const connections = getActiveConnections();
-  const shallowConnections = toShallowConnections(connections);
-  return shallowConnections;
+const getSubscriptions = async (): Promise<ShallowSubscribers> => {
+  const subscribers = getActiveSubscribers();
+  const shallowSubscribers = toShallowSubscribers(subscribers);
+  return shallowSubscribers;
 };
 
-const toShallowConnections = (connections: Connections): ShallowConnections => {
-  const shallowConnections: ShallowConnections = {};
-  Object.keys(connections).forEach((id) => {
-    const { messages, timeOfSubscription, topic } = connections[id];
-    shallowConnections[id] = {
+const toShallowSubscribers = async (subscribers: Subscribers): Promise<ShallowSubscribers> => {
+  const shallowSubscribers: ShallowSubscribers = {};
+  const subscriberIds = Object.keys(subscribers);
+  const messagesResults = await Promise.all(subscriberIds.map(id => subscribers[id].getMessages()));
+  subscriberIds.forEach((id, index) => {
+    const { timeOfSubscription, topic } = subscribers[id];
+    const messages = messagesResults[index];
+    shallowSubscribers[id] = {
+      id,
       messages: truncateMessages(messages),
       timeOfSubscription,
       topic,
     };
   });
-  return shallowConnections;
+
+  return shallowSubscribers;
 };
 
 const truncateMessages = (messages: ConsumedMessage[]): ConsumedMessage[] => {

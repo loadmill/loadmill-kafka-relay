@@ -21,33 +21,32 @@ type PresentableError = {
   };
 };
 
-export const serverErrorHandler = (
+export const serverErrorHandler = async (
   error: ErrorType,
   request: FastifyRequest,
   reply: FastifyReply,
-): PresentableError => {
+): Promise<PresentableError> => {
   const { log } = request;
   log.error(error);
-  reply.type('application/json');
   let message = error.message || '¯\\_(ツ)_/¯ There was an error';
   const statusCode = (error as FastifyError).statusCode;
 
   if (error.name === 'ResponseError') {
-    reply.code((error as ResponseError).status);
+    await reply.code((error as ResponseError).status);
     message = (error as ResponseError).message;
   } else if (error instanceof ConfluentSchemaRegistryError) {
-    reply.code(400);
+    await reply.code(400);
     message = error.message;
   } else if (error instanceof ClientError) {
-    reply.code(error.statusCode);
+    await reply.code(error.statusCode);
     message = error.message;
   } else if (error instanceof KafkaJSError) {
-    reply.code(400);
+    await reply.code(400);
     message = error.message;
   } else if (statusCode) { // error instanceof FastifyError
-    reply.code(statusCode);
+    await reply.code(statusCode);
   } else {
-    reply.code(500);
+    await reply.code(500);
     message = '¯\\_(ツ)_/¯ Oops! Something went wrong';
   }
 

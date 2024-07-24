@@ -49,6 +49,7 @@
     "pino-pretty": "^10.0.0",
     "postinstall-postinstall": "^2.1.0",
     "qs": "^6.11.1",
+    "redis": "^4.6.15",
     "ts-jest": "^29.1.1",
     "uri-js": "^4.4.1"
   }
