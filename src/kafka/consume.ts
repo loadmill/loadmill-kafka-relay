@@ -3,7 +3,7 @@ import { ClientError } from '../errors';
 import log from '../log';
 import { ConsumedMessage, ConsumeOptions, ConsumeParams } from '../types';
 
-import { getConnection } from './connections';
+import { getMessages } from './subscribers';
 
 const SECOND_MS = 1000;
 const MAX_QUERY_TIME_MS = 25 * SECOND_MS;
@@ -14,7 +14,7 @@ export const consume = async (
   { multiple, regexFilter, text, timeout }: ConsumeOptions,
 ): Promise<ConsumedMessage[]> => {
   const res = await getMessagesOrTimeout(
-    getConnection(id).messages,
+    await getMessages(id),
     {
       multiple,
       regexFilter,

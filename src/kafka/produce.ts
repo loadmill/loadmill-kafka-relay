@@ -60,8 +60,8 @@ const prepareProduceMessage = async (message: ProduceMessage, options: ProduceOp
 };
 
 const applyConversions = (message: ProduceMessage, conversions: ConvertOption[]) => {
-  convert(message.value, conversions);
-  convert(message.headers, conversions);
+  void convert(message.value, conversions);
+  void convert(message.headers, conversions);
 };
 
 const prepareHeaders = async (

@@ -19,8 +19,9 @@ export const setActiveSchemaId = (id: number): void => {
   activeSchemaId = id;
 };
 
-export const handleKafkaRegistryEnvVars = (): void => {
+export const handleKafkaRegistryEnvVars = async (): Promise<void> => {
   if (process.env.LOADMILL_KAFKA_SCHEMA_REGISTRY_URL) {
+    log.debug('Handling Kafka registry environment variables');
     const registryOptions: RegistryOptions = {
       url: process.env.LOADMILL_KAFKA_SCHEMA_REGISTRY_URL,
     };
@@ -38,12 +39,13 @@ export const handleKafkaRegistryEnvVars = (): void => {
         registryOptions.encode.version = Number(process.env.LOADMILL_KAFKA_SCHEMA_VERSION);
       }
     }
-    initSchemaRegistry(registryOptions);
+    await initSchemaRegistry(registryOptions);
   }
 };
 
 export const handleKafkaCompressionEnvVars = (): void => {
   if (process.env.LOADMILL_KAFKA_LZ4_COMPRESSION_CODEC) {
+    log.debug('Handling Kafka compression environment variables');
     CompressionCodecs[CompressionTypes.LZ4] = new LZ4().codec;
   }
 };
