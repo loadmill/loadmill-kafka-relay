@@ -5,6 +5,7 @@ import { ClientError } from './errors';
 import { injectEnvVars } from './inject-env';
 import { getConnection, removeConnection } from './kafka/connections';
 import { consume } from './kafka/consume';
+import { getDebugData } from './kafka/debug';
 import { produceMessage } from './kafka/produce';
 import { initSchemaRegistry, setEncodeSchema } from './kafka/schema-registry';
 import { subscribe } from './kafka/subscribe';
@@ -111,6 +112,12 @@ app.put('/registry/encode', {
   await setEncodeSchema(encodeSchemaOptions);
   reply.type('application/json').code(200);
   return { message: 'Schema registry encode schema set successfully' };
+});
+
+app.get('/debug', async (_, reply) => {
+  const debugData = await getDebugData();
+  reply.type('application/json').code(200);
+  return debugData;
 });
 
 app.setValidatorCompiler(compile);

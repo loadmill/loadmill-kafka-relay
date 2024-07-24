@@ -6,12 +6,18 @@ export type Connections = {
   [id: string]: Subscriber;
 };
 
+export type ShallowConnections = {
+  [id: string]: ShallowSubscriber;
+};
+
 export type Subscriber = {
   consumer: Consumer;
   messages: ConsumedMessage[];
   timeOfSubscription: number; // unix timestamp (Date.now())
   topic: string;
 };
+
+export type ShallowSubscriber = Omit<Subscriber, 'consumer'>;
 
 export type KafkaMessages = (Omit<KafkaMessage, 'value'> & { value?: string })[];
 
@@ -67,6 +73,7 @@ export type ConsumeOptions = {
 export type ConsumedMessage = {
   headers?: { [key: string]: string | undefined };
   key?: string | null;
+  timestamp: string;
   value: string;
 };
 

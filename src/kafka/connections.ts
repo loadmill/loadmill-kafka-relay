@@ -46,3 +46,5 @@ export const removeConnection = async (id: string): Promise<string | undefined> 
     return id;
   }
 };
+
+export const getActiveConnections = (): Connections => connections;
