@@ -1,46 +1,65 @@
-import { Connections, ConsumedMessage, ShallowConnections } from '../../types';
-import { getActiveConnections } from '../connections';
+import { ConsumedMessage } from '../../types';
 import { getSchemaRegistryData } from '../schema-registry';
+import { getActiveSubscribers } from '../subscribers';
+import {
+  RedisSubscriber,
+  ShallowRedisSubscribers,
+} from '../subscribers/redis-subscriber';
+import {
+  ShallowSubscribers,
+  Subscribers,
+} from '../subscribers/subscriber';
 
-export type DebugData = {
+type DebugSubscribers = ShallowSubscribers | ShallowRedisSubscribers;
+
+type DebugData = {
   schemaRegistry?: {
     url: string;
   };
-  subscriptions: ShallowConnections;
+  subscriptions: DebugSubscribers;
 };
 
 export const getDebugData = async (): Promise<DebugData> => {
   return {
     schemaRegistry: await getSchemaRegistryData(),
-    subscriptions: getSubscriptions(),
+    subscriptions: await getSubscriptions(),
   };
 };
 
-const getSubscriptions = (): ShallowConnections => {
-  const connections = getActiveConnections();
-  const shallowConnections = toShallowConnections(connections);
-  return shallowConnections;
+const getSubscriptions = async (): Promise<DebugSubscribers> => {
+  const subscribers = await getActiveSubscribers();
+  const shallowSubscribers = toShallowSubscribers(subscribers);
+  return shallowSubscribers;
 };
 
-const toShallowConnections = (connections: Connections): ShallowConnections => {
-  const shallowConnections: ShallowConnections = {};
-  Object.keys(connections).forEach((id) => {
-    const { messages, timeOfSubscription, topic } = connections[id];
-    shallowConnections[id] = {
+const toShallowSubscribers = async (subscribers: Subscribers): Promise<DebugSubscribers> => {
+  const shallowSubscribers: (ShallowSubscribers | ShallowRedisSubscribers) = {};
+  const subscriberIds = Object.keys(subscribers);
+  const messagesResults = await Promise.all(subscriberIds.map(id => subscribers[id].getMessages()));
+  subscriberIds.forEach((id, index) => {
+    const { timeOfSubscription, topic } = subscribers[id];
+    const messages = messagesResults[index];
+    shallowSubscribers[id] = {
+      instanceId: (subscribers[id] as RedisSubscriber).instanceId,
       messages: truncateMessages(messages),
       timeOfSubscription,
       topic,
     };
   });
-  return shallowConnections;
+
+  return shallowSubscribers;
 };
 
 const truncateMessages = (messages: ConsumedMessage[]): ConsumedMessage[] => {
   return messages.map((message) => {
     const { value, ...rest } = message;
+    let truncatedValue = value?.toString().slice(0, 10);
+    if (truncatedValue?.length > 10) {
+      truncatedValue = truncatedValue + '...';
+    }
     return {
       ...rest,
-      value: value?.toString().slice(0, 10) + '...',
+      value: truncatedValue,
     };
   });
 };

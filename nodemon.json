@@ -11,6 +11,7 @@
     "node_modules/**/node_modules"
   ],
   "restartable": "rs",
+  "signal": "SIGTERM",
   "verbose": true,
   "watch": [
     "src/"

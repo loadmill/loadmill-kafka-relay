@@ -3,12 +3,15 @@ import Fastify from 'fastify';
 import { APP_NAME } from './constants';
 import { ClientError } from './errors';
 import { injectEnvVars } from './inject-env';
-import { getConnection, removeConnection } from './kafka/connections';
 import { consume } from './kafka/consume';
 import { getDebugData } from './kafka/debug';
 import { produceMessage } from './kafka/produce';
 import { initSchemaRegistry, setEncodeSchema } from './kafka/schema-registry';
 import { subscribe } from './kafka/subscribe';
+import {
+  isSubscriberExists,
+  removeSubscriber,
+} from './kafka/subscribers';
 import log from './log';
 import { serverErrorHandler } from './server-errors';
 import {
@@ -33,38 +36,38 @@ const app = Fastify({
   logger: log,
 });
 
-app.get('/', async (_, reply) => {
-  reply.type('application/json').code(200);
+app.get('/', async () => {
   return { hello: `From ${APP_NAME}` };
 });
 
 app.post('/subscribe', {
   preValidation: injectEnvVars,
   schema: subscribeValidationSchema,
-}, async (request, reply) => {
+}, async (request) => {
   const { brokers, topic, sasl, ssl, timestamp } = request.body as SubscribeParams & SubscribeOptions;
   const { id } = await subscribe({ brokers, topic }, { sasl, ssl, timestamp });
-  reply.type('application/json').code(200);
   return { id };
 });
 
-app.delete('/subscriptions/:id', { // unsubscribe
-}, async (request, reply) => {
+// unsubscribe
+app.delete('/subscriptions/:id', async (request) => {
   const { id } = request.params as { id: string };
 
-  if (!getConnection(id)) {
-    throw new ClientError(404, `No connection found for id ${id}`);
+  if (!(await isSubscriberExists(id))) {
+    throw new ClientError(404, `No subscriber found for id ${id}`);
   }
 
-  await removeConnection(id);
-  reply.type('application/json').code(200);
+  await removeSubscriber(id);
+
   return { id };
 });
 
-app.get('/consume/:id', { schema: consumeValidationSchema }, async (request, reply) => {
+app.get('/consume/:id', { schema: consumeValidationSchema }, async (request) => {
   const { id } = request.params as { id: string };
 
-  const { filter: regexFilter, multiple, text, timeout } = request.query as { filter?: string; multiple?: number; text?: string; timeout?: number };
+  const { filter: regexFilter, multiple, text, timeout } = request.query as {
+    filter?: string; multiple?: number; text?: string; timeout?: number;
+  };
   const consumeOptions = {
     multiple,
     regexFilter,
@@ -72,12 +75,11 @@ app.get('/consume/:id', { schema: consumeValidationSchema }, async (request, rep
     timeout,
   } as ConsumeOptions;
 
-  if (!getConnection(id)) {
-    throw new ClientError(404, `No connection found for id ${id}`);
+  if (!(await isSubscriberExists(id))) {
+    throw new ClientError(404, `No subscriber found for id ${id}`);
   }
 
   const messages = await consume({ id }, consumeOptions);
-  reply.type('application/json').code(200);
 
   return {
     messages,
@@ -87,36 +89,32 @@ app.get('/consume/:id', { schema: consumeValidationSchema }, async (request, rep
 app.post('/produce', {
   preValidation: injectEnvVars,
   schema: produceValidationSchema,
-}, async (request, reply) => {
+}, async (request) => {
   const { brokers, conversions, encode, message, topic, sasl, ssl } = request.body as ProduceParams & ProduceOptions;
   const recordMetaData = await produceMessage({ brokers, message, topic }, { conversions, encode, sasl, ssl });
-  reply.type('application/json').code(200);
   return recordMetaData;
 });
 
 app.post('/registry', {
   preValidation: injectEnvVars,
   schema: registryValidationSchema,
-}, async (request, reply) => {
+}, async (request) => {
   const registryOptions = request.body as RegistryOptions;
   const message = await initSchemaRegistry(registryOptions);
-  reply.type('application/json').code(200);
   return { message };
 });
 
 app.put('/registry/encode', {
   preValidation: injectEnvVars,
   schema: encodeValidationSchema,
-}, async (request, reply) => {
+}, async (request) => {
   const encodeSchemaOptions = request.body as EncodeSchemaOptions;
   await setEncodeSchema(encodeSchemaOptions);
-  reply.type('application/json').code(200);
   return { message: 'Schema registry encode schema set successfully' };
 });
 
-app.get('/debug', async (_, reply) => {
+app.get('/debug', async () => {
   const debugData = await getDebugData();
-  reply.type('application/json').code(200);
   return debugData;
 });
 
@@ -124,7 +122,7 @@ app.setValidatorCompiler(compile);
 
 app.setErrorHandler(serverErrorHandler);
 
-app.listen({
+void app.listen({
   host: '0.0.0.0',
   port: Number(process.env.LOADMILL_KAFKA_SERVER_PORT) || 3000,
 });
