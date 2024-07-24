@@ -115,8 +115,8 @@ app.put('/registry/encode', {
 });
 
 app.get('/debug', async (_, reply) => {
-  reply.type('application/json').code(200);
   const debugData = await getDebugData();
+  reply.type('application/json').code(200);
   return debugData;
 });
 
