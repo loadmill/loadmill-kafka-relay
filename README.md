@@ -30,7 +30,9 @@ The Loadmill Kafka Relay aims to simplify the testing of services that use Kafka
     - [Why Environment Variables?](#why-environment-variables)
     - [How to Use Env Vars Here?](#how-to-use-env-vars-here)
     - [Env Var Names Used in This App](#env-var-names-used-in-this-app)
-
+  - [Debugging](#debugging)
+    - [Debug API](#debug-api)
+    - [Logging](#logging)
 
 
 ## Getting Started
@@ -463,4 +465,56 @@ You may use the following environment variables in this app:
 
 ```bash
 LOADMILL_KAFKA_SERVER_PORT= # The port on which the server will listen, defaults to 3000
+```
+### Debugging
+
+### Debug API
+
+The Loadmill Kafka Relay Client provides a debug API that can be used to get information about the current state of the relay, such as the list of active subscriptions and the current schema registry configuration.
+
+Endpoint: `GET /debug`
+
+Example Request:
+```http
+GET /debug
+```
+
+Example Response:
+```json
+{
+  "schemaRegistry": {
+    "url": "https://schema-registry.example.com"
+  },
+  "subscriptions": {
+    "11920dc8-f571-43e7-a0e2-af5f66b422f1": {
+      "topic": "my_topic",
+      "timeOfSubscription": 1721803796114,
+      "messages": [
+        {
+          "timestamp": "1721719271555",
+          "offset": "16",
+          "key": null,
+          "headers": {},
+          "value": "{\"a\":\"b\",\"..."
+        }
+      ]
+    },
+    "f1b1b1b1-1b1b-1b1b-1b1b-1b1b1b1b1b1b": {
+      "topic": "his_topic",
+      "timeOfSubscription": 1721803796222,
+      "messages": []
+    }
+  }
+}
+```
+
+### Logging
+
+The Loadmill Kafka Relay Client writes its logs to `loadmill-kafka-relay.log` in the root directory of the app, as well as to the console.
+By default, logs are written the `info` level. You can customize the logging behavior by setting the following environment variables:
+
+```bash
+NODE_ENV=development # Setting this will enable debug logs to console only
+
+LOG_LEVEL= # The level of logging. Can be one of the following: "fatal" | "error" | "warn" | "info" | "debug" | "trace". Defaults to info.
 ```
