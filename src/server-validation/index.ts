@@ -105,6 +105,11 @@ export const subscribeValidationSchema: FastifySchema = {
       topic,
       sasl,
       ssl,
+      timestamp: {
+        type: 'number',
+        description: 'Optional epoch timestamp',
+        minimum: 1000000000000, // Minimum value for a valid epoch timestamp in milliseconds
+      },
     },
     required: ['brokers', 'topic'],
   },

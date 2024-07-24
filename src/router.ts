@@ -42,8 +42,8 @@ app.post('/subscribe', {
   preValidation: injectEnvVars,
   schema: subscribeValidationSchema,
 }, async (request, reply) => {
-  const { brokers, topic, sasl, ssl } = request.body as SubscribeParams & SubscribeOptions;
-  const { id } = await subscribe({ brokers, topic }, { sasl, ssl });
+  const { brokers, topic, sasl, ssl, timestamp } = request.body as SubscribeParams & SubscribeOptions;
+  const { id } = await subscribe({ brokers, topic }, { sasl, ssl, timestamp });
   reply.type('application/json').code(200);
   return { id };
 });

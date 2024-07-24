@@ -108,6 +108,7 @@ To subscribe to a Kafka topic and start receiving messages, send a POST request 
     - `mechanism` (string): The SASL mechanism to use for authentication.
     - `username` (string): The username for authentication.
     - `password` (string): The password for authentication.
+  - `timestamp` (number, optional): The timestamp from which to start consuming messages. Should be a number in the format of *milliseconds since the Unix epoch* (Example: 1623346800000). If not provided, the relay will start consuming messages from 1 minute ago as the default.
 
 Example Request:
 ```http
