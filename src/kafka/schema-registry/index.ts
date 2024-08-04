@@ -19,7 +19,7 @@ export const setActiveSchemaId = (id: number): void => {
   activeSchemaId = id;
 };
 
-export const handleKafkaRegistryEnvVars = (): void => {
+export const handleKafkaRegistryEnvVars = async (): Promise<void> => {
   if (process.env.LOADMILL_KAFKA_SCHEMA_REGISTRY_URL) {
     const registryOptions: RegistryOptions = {
       url: process.env.LOADMILL_KAFKA_SCHEMA_REGISTRY_URL,
@@ -38,7 +38,7 @@ export const handleKafkaRegistryEnvVars = (): void => {
         registryOptions.encode.version = Number(process.env.LOADMILL_KAFKA_SCHEMA_VERSION);
       }
     }
-    initSchemaRegistry(registryOptions);
+    await initSchemaRegistry(registryOptions);
   }
 };
 

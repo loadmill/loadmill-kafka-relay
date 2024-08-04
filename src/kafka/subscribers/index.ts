@@ -1,0 +1,9 @@
+import { RedisSubscribersManager } from './redis-subscribers-manager';
+import { subscriptionsManager } from './subscribers-manager-factory';
+
+export const addSubscriber = subscriptionsManager.add;
+export const getSubscriber = subscriptionsManager.get;
+export const removeSubscriber = subscriptionsManager.delete;
+export const getActiveSubscribers = subscriptionsManager.getActiveSubscribers;
+
+export const takeOverSubscribers = (subscriptionsManager as RedisSubscribersManager).takeOverSubscribers;
