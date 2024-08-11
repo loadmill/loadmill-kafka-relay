@@ -13,7 +13,17 @@ export const createRedisClient = (clientType: RedisClientType): RedisClient | un
   try {
     if (process.env.REDIS_URL) {
       const url = process.env.REDIS_URL;
-      const redisClient = createClient({ url });
+      const redisClient = createClient({
+        socket: {
+          reconnectStrategy: (retries: number) => {
+            if (retries > 100) {
+              return new Error('Too many retries');
+            }
+            return 0;
+          },
+        },
+        url,
+      });
       void redisClient
         .on('error', (error) => {
           log.error(error, `Redis ${clientType} Error`);
@@ -29,6 +39,7 @@ export const createRedisClient = (clientType: RedisClientType): RedisClient | un
       return redisClient;
     }
   } catch (error) {
-    log.error(error, `Error creating Redis ${clientType}`);
+    log.error(error);
+    process.exit(1);
   }
 };
