@@ -1,7 +1,6 @@
 import { EachMessagePayload } from 'kafkajs';
 
 import { thisRelayInstanceId } from '../../multi-instance';
-import { KEY_DOES_NOT_EXIST } from '../../redis/constants';
 import { getRedisClient } from '../../redis/get-redis-client';
 import { RedisClient } from '../../redis/types';
 import { ConsumedMessage, SubscribeOptions, SubscribeParams } from '../../types';
@@ -32,11 +31,9 @@ export class RedisSubscriber extends Subscriber {
     const serializedMessage = JSON.stringify(consumedMessage);
 
     const messagesKey = toMessagesKey(this.id);
-    const ttl = await this.redisClient.ttl(messagesKey);
-    const expiryInSeconds = ttl === KEY_DOES_NOT_EXIST ? MAX_SUBSCRIBER_TTL_SECONDS : ttl;
     await this.redisClient.multi()
       .rPush(messagesKey, serializedMessage)
-      .expire(messagesKey, expiryInSeconds)
+      .expire(messagesKey, MAX_SUBSCRIBER_TTL_SECONDS)
       .exec();
   }
 

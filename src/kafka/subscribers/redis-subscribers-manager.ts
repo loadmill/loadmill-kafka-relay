@@ -49,6 +49,7 @@ export class RedisSubscribersManager extends SubscribersManager {
         const { timeOfSubscription } = subscriber;
         log.info({ id, timeOfSubscription, topic: subscriber.topic }, 'Unsubscribing expired subscriber');
         await this.deleteInMemorySubscriber(id);
+        await this.deleteMessagesFromRedis(id);
       }
     }));
   };
