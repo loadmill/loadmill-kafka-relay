@@ -1,7 +1,7 @@
 import { EachMessagePayload } from 'kafkajs';
 
 import { thisRelayInstanceId } from '../../multi-instance';
-import { getRedisClient } from '../../redis/get-redis-client';
+import { getRedisClient } from '../../redis/redis-client';
 import { RedisClient } from '../../redis/types';
 import { ConsumedMessage, SubscribeOptions, SubscribeParams } from '../../types';
 
@@ -12,7 +12,7 @@ import { ShallowSubscriber, Subscriber } from './subscriber';
 import { fromKafkaToConsumedMessage } from './to-consumed-message';
 
 export class RedisSubscriber extends Subscriber {
-  private redisClient = getRedisClient() as RedisClient;
+  private redisClient: RedisClient = getRedisClient();
   readonly instanceId: string = thisRelayInstanceId;
 
   constructor(

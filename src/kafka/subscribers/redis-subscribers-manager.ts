@@ -1,7 +1,9 @@
 import log from '../../log';
 import { thisRelayInstanceId } from '../../multi-instance';
-import { getRedisClient } from '../../redis/get-redis-client';
-import { getRedisSubscriberClient } from '../../redis/get-redis-subscriber-client';
+import {
+  getRedisClient,
+  getRedisSubscriberClient,
+} from '../../redis/redis-client';
 import { RedisClient } from '../../redis/types';
 import {
   ConsumedMessage,
@@ -26,8 +28,8 @@ import { SubscribersManager } from './subscribers-manager';
  */
 export class RedisSubscribersManager extends SubscribersManager {
   protected readonly subscribers: RedisSubscribers = {};
-  private readonly redisClient = getRedisClient() as RedisClient;
-  private readonly redisSubscriberClient = getRedisSubscriberClient() as RedisClient;
+  private readonly redisClient: RedisClient = getRedisClient();
+  private readonly redisSubscriberClient: RedisClient = getRedisSubscriberClient();
 
   constructor() {
     super();
