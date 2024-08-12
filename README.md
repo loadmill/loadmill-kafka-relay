@@ -527,19 +527,20 @@ LOG_LEVEL= # The level of logging. Can be one of the following: "fatal" | "error
 
 ## Multi Instance
 
-The Loadmill Kafka Relay supports a multi-instance mode, which allows the relay to be stateful and manage its data on Redis. This feature is enabled by passing the `REDIS_URL` environment variable. When running in multi-instance mode, the relay will store its state in Redis and can take over other instances if they are shut down.
+The Loadmill Kafka Relay supports a multi-instance mode, which allows the relay to manage its data on Redis. This feature is enabled by passing the `REDIS_URL` environment variable. When running in multi-instance mode, the relay will store its state in Redis and can take over other instances if they are shut down.
+
 
 #### Enabling Multi-Instance Mode
 
 To enable multi-instance mode, set the `REDIS_URL` environment variable to the URL of your Redis instance. This can be done by adding the following line to your environment configuration:
 
 ```bash
-REDIS_URL=redis://your-redis-url:6379
+REDIS_URL=rediss://your-redis-host:6379
 ```
 
 #### Behavior in Multi-Instance Mode
 
-- **Stateful Management:** The relay will store its Subscribers, Kafka Messages and Kafka connections in Redis, ensuring that the state is preserved across different instances.
+- **Memory Management:** The relay will store its Subscribers, Kafka Messages and Kafka connections in Redis, ensuring that the state is preserved across different instances.
 - **Instance Takeover:** If an instance is shut down, other running instances will take over its responsibilities, ensuring continuous operation.
 
 #### API Behavior in Multi-Instance Mode
@@ -550,5 +551,3 @@ REDIS_URL=redis://your-redis-url:6379
 #### Best Practices for Multi-Instance Mode
 
 Multi-instance mode is best suited for scenarios where you have multiple instances running in a virtual environment (in the background) and only expose a single URL for all the instances. This can be achieved using a load balancer (to ensure no single relay becomes overwhelmed) or a reverse proxy.
-
-By enabling multi-instance mode, you can ensure that the Loadmill Kafka Relay operates reliably and efficiently in a distributed environment, providing high availability and fault tolerance.
