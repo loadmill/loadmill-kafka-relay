@@ -1,5 +1,3 @@
-import { getRedisClient } from '../redis/redis-client';
-
 export const isMultiInstance = (): boolean => {
-  return !!getRedisClient();
+  return !!process.env.REDIS_URL;
 };
