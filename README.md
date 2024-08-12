@@ -536,6 +536,8 @@ To enable multi-instance mode, set the `REDIS_URL` environment variable to the U
 
 ```bash
 REDIS_URL=rediss://your-redis-host:6379
+# Optional:
+REDIS_TLS_REJECT_UNAUTHORIZED=false # If you're Redis instance is using a self-signed certificate
 ```
 
 #### Behavior in Multi-Instance Mode

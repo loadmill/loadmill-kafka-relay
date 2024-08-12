@@ -39,6 +39,7 @@ const createRedisClient = (clientType: RedisClientType): RedisClient => {
           }
           return 0;
         },
+        rejectUnauthorized: process.env.REDIS_TLS_REJECT_UNAUTHORIZED !== 'false',
       },
       url,
     });
