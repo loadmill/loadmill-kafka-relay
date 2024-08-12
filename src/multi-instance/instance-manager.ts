@@ -9,11 +9,8 @@ import { SHUTDOWN_CHANNEL } from './redis-channels';
 import { instancesPrefixKey } from './redis-keys';
 import { thisRelayInstanceId } from './relay-instance-id';
 
-const redisSubscriberClient = getRedisSubscriberClient();
-const redisClient = getRedisClient();
-
 export const subscribeToShutdownAnnouncement = async (): Promise<void> => {
-  await redisSubscriberClient.subscribe(
+  await getRedisSubscriberClient().subscribe(
     SHUTDOWN_CHANNEL,
     handleShutdownAnnouncement,
   );
@@ -28,7 +25,7 @@ const handleShutdownAnnouncement = async <T extends string>(message: T) => {
 };
 
 export const registerInstance = async (): Promise<void> => {
-  await redisClient.zAdd(instancesPrefixKey, { score: Date.now(), value: thisRelayInstanceId });
+  await getRedisClient().zAdd(instancesPrefixKey, { score: Date.now(), value: thisRelayInstanceId });
   log.info({ thisRelayInstanceId }, 'Registered Instance');
 };
 
@@ -41,7 +38,7 @@ export const onShutdown = async (): Promise<void> => {
 };
 
 const unregisterInstance = async (): Promise<void> => {
-  await redisClient.zRem(instancesPrefixKey, thisRelayInstanceId);
+  await getRedisClient().zRem(instancesPrefixKey, thisRelayInstanceId);
   log.info({ thisRelayInstanceId }, 'Unregistered Instance');
 };
 
@@ -54,11 +51,11 @@ const announceShutdown = async (): Promise<void> => {
     return;
   }
   log.info({ selectedInstance }, 'Announcing shutdown to selected instance');
-  await redisClient.publish(SHUTDOWN_CHANNEL, JSON.stringify({ from: thisRelayInstanceId, to: selectedInstance }));
+  await getRedisClient().publish(SHUTDOWN_CHANNEL, JSON.stringify({ from: thisRelayInstanceId, to: selectedInstance }));
 };
 
 const selectRandomInstance = async (): Promise<string | undefined> => {
-  const instances = await redisClient.zRange(instancesPrefixKey, 0, -1);
+  const instances = await getRedisClient().zRange(instancesPrefixKey, 0, -1);
   log.info({ instances }, 'Available relay instances');
   const otherInstances = instances.filter(id => id !== thisRelayInstanceId);
   if (otherInstances.length > 0) {
@@ -68,10 +65,10 @@ const selectRandomInstance = async (): Promise<string | undefined> => {
 };
 
 const cleanupOnShutdown = async (): Promise<void> => {
-  await redisSubscriberClient.unsubscribe(SHUTDOWN_CHANNEL);
+  await getRedisSubscriberClient().unsubscribe(SHUTDOWN_CHANNEL);
   log.info(`Unsubscribed redis subscriber client from ${SHUTDOWN_CHANNEL}`);
-  await redisSubscriberClient.disconnect();
+  await getRedisSubscriberClient().disconnect();
   log.info('Disconnected redis subscriber client');
-  await redisClient.disconnect();
+  await getRedisClient().disconnect();
   log.info('Disconnected redis client');
 };
