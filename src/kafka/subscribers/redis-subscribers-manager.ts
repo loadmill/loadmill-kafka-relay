@@ -15,7 +15,7 @@ import {
   MAX_SUBSCRIBER_TTL_SECONDS,
   SUBSCRIBER_EXPIRY_CHECK_INTERVAL_MS,
 } from './constants';
-import { getMessagesFromRedis } from './get-messages-from-redis';
+import { getMessagesFromRedis } from './messages';
 import { DELETE_SUBSCRIBER_CHANNEL } from './redis-channels';
 import { toMessagesKey, toSubscriberKey } from './redis-keys';
 import { RedisSubscriber, RedisSubscribers } from './redis-subscriber';

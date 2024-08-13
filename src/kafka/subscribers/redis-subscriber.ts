@@ -6,10 +6,12 @@ import { RedisClient } from '../../redis/types';
 import { ConsumedMessage, SubscribeOptions, SubscribeParams } from '../../types';
 
 import { MAX_SUBSCRIBER_TTL_SECONDS } from './constants';
-import { getMessagesFromRedis } from './get-messages-from-redis';
+import {
+  fromKafkaToConsumedMessage,
+  getMessagesFromRedis,
+} from './messages';
 import { toMessagesKey } from './redis-keys';
 import { ShallowSubscriber, Subscriber } from './subscriber';
-import { fromKafkaToConsumedMessage } from './to-consumed-message';
 
 export class RedisSubscriber extends Subscriber {
   private redisClient: RedisClient = getRedisClient();

@@ -7,7 +7,7 @@ import { ConsumedMessage, SubscribeOptions, SubscribeParams } from '../../types'
 import { prepareBrokers } from '../brokers';
 import { kafkaLogCreator } from '../log-creator';
 
-import { fromKafkaToConsumedMessage } from './to-consumed-message';
+import { fromKafkaToConsumedMessage } from './messages';
 
 export class Subscriber {
   consumer: Consumer;
