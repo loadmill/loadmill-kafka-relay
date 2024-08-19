@@ -33,6 +33,11 @@ The Loadmill Kafka Relay aims to simplify the testing of services that use Kafka
   - [Debugging](#debugging)
     - [Debug API](#debug-api)
     - [Logging](#logging)
+- [Multi Instance](#multi-instance)
+  - [Enabling Multi-Instance Mode](#enabling-multi-instance-mode)
+  - [Behavior in Multi-Instance Mode](#behavior-in-multi-instance-mode)
+  - [API Behavior in Multi-Instance Mode](#api-behavior-in-multi-instance-mode)
+  - [Best Practices for Multi-Instance Mode](#best-practices-for-multi-instance-mode)
 
 
 ## Getting Started
@@ -519,3 +524,32 @@ NODE_ENV=development # Setting this will enable debug logs to console only
 
 LOG_LEVEL= # The level of logging. Can be one of the following: "fatal" | "error" | "warn" | "info" | "debug" | "trace". Defaults to info.
 ```
+
+## Multi Instance
+
+The Loadmill Kafka Relay supports a multi-instance mode, which allows the relay to manage its data on Redis. This feature is enabled by passing the `REDIS_URL` environment variable. When running in multi-instance mode, the relay will store its state in Redis and can take over other instances if they are shut down.
+
+
+#### Enabling Multi-Instance Mode
+
+To enable multi-instance mode, set the `REDIS_URL` environment variable to the URL of your Redis instance. This can be done by adding the following line to your environment configuration:
+
+```bash
+REDIS_URL=rediss://your-redis-host:6379
+# Optional:
+REDIS_TLS_REJECT_UNAUTHORIZED=false # If you're Redis instance is using a self-signed certificate
+```
+
+#### Behavior in Multi-Instance Mode
+
+- **Memory Management:** The relay will store its Subscribers, Kafka Messages and Kafka connections in Redis, ensuring that the state is preserved across different instances.
+- **Instance Takeover:** If an instance is shut down, other running instances will take over its responsibilities, ensuring continuous operation.
+
+#### API Behavior in Multi-Instance Mode
+
+- **/subscribe API:** This API will create a subscriber maintained by the instance that handles the request.
+- **/consume, /unsubscribe, and /debug APIs:** These APIs are agnostic of the instance and will return the desired result regardless of whether the subscriber ID belongs to that instance or another.
+
+#### Best Practices for Multi-Instance Mode
+
+Multi-instance mode is best suited for scenarios where you have multiple instances running in a virtual environment (in the background) and only expose a single URL for all the instances. This can be achieved using a load balancer (to ensure no single relay becomes overwhelmed) or a reverse proxy.

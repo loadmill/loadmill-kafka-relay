@@ -1,23 +1,6 @@
 import { UUID } from 'crypto';
 
-import { Consumer, IHeaders, KafkaConfig, KafkaMessage } from 'kafkajs';
-
-export type Connections = {
-  [id: string]: Subscriber;
-};
-
-export type ShallowConnections = {
-  [id: string]: ShallowSubscriber;
-};
-
-export type Subscriber = {
-  consumer: Consumer;
-  messages: ConsumedMessage[];
-  timeOfSubscription: number; // unix timestamp (Date.now())
-  topic: string;
-};
-
-export type ShallowSubscriber = Omit<Subscriber, 'consumer'>;
+import { IHeaders, KafkaConfig, KafkaMessage } from 'kafkajs';
 
 export type KafkaMessages = (Omit<KafkaMessage, 'value'> & { value?: string })[];
 

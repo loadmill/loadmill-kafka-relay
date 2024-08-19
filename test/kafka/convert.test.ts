@@ -106,7 +106,7 @@ describe('convert', () => {
       bar: 1,
       foo: '2',
     };
-    expect(async () => await convert(obj, [{ key: 'foo', type: 'foo' as ConvertType }]))
+    void expect(async () => await convert(obj, [{ key: 'foo', type: 'foo' as ConvertType }]))
       .rejects
       .toThrow('Unknown convertion type foo');
   });
