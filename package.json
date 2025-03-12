@@ -11,7 +11,7 @@
     "dev:watch": "nodemon --inspect=0.0.0.0:9221 src/index.ts",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx --color",
     "postinstall": "patch-package",
-    "start": "node dist",
+    "start": "node --no-experimental-fetch dist",
     "test": "jest"
   },
   "devDependencies": {
