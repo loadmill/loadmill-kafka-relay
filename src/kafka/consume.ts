@@ -68,10 +68,25 @@ const findMessageByRegex = (messages: ConsumedMessage[], regexFilter?: string, m
 const filterMessages = (messages: ConsumedMessage[], regexFilter: string) => {
   log.debug({ messages, regexFilter }, 'Filtering messages by regex');
   const regex = new RegExp(regexFilter);
+  const filteredByHeader = filterByHeaders(regex, messages);
   const filteredMessages = messages.filter((message) => regex.test(message.value || ''));
-  messages = filteredMessages;
+  messages = filteredMessages.concat(filteredByHeader);
   return messages;
 };
+const filterByHeaders = (regex: RegExp, messages: ConsumedMessage[]): ConsumedMessage[] =>  {
+  return messages.filter((message) => {
+    if (!message.headers || Object.keys(message.headers).length === 0) {
+      return false;
+    }
+     else  return hasMatchingHeader(message.headers, regex)
+  });
+}
+const hasMatchingHeader= (headers: { [key: string]: string | undefined }, regex: RegExp): boolean {
+  Object.keys(headers).some((key) => {
+    const value = headers[key];
+    return typeof value === 'string' && regex.test(value);
+  });
+}
 
 const getLatestNMessages = (messages: ConsumedMessage[], n: number = 1): ConsumedMessage[] | undefined => {
   if (messages.length > 0) {
