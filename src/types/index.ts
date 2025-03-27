@@ -49,6 +49,7 @@ export type ConsumeParams = {
 };
 
 export type ConsumeOptions = {
+  headerValueRegexFilter?: string;
   multiple?: number;
   regexFilter?: string;
   text?: string; // 'true', 'false', 'TRUE', 'FALSE', 'True', 'False', '1', '0'

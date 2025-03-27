@@ -1,3 +1,5 @@
+import isEmpty from 'lodash/isEmpty';
+
 import { TRUE_AS_STRING_VALUES } from '../constants';
 import { ClientError } from '../errors';
 import log from '../log';
@@ -11,11 +13,12 @@ const WAIT_INTERVAL_MS = 2 * SECOND_MS;
 
 export const consume = async (
   { id }: ConsumeParams,
-  { multiple, regexFilter, text, timeout }: ConsumeOptions,
+  { headerValueRegexFilter, multiple, regexFilter, text, timeout }: ConsumeOptions,
 ): Promise<ConsumedMessage[]> => {
   const res = await getMessagesOrTimeout(
     await getMessages(id),
     {
+      headerValueRegexFilter,
       multiple,
       regexFilter,
       timeout,
@@ -34,6 +37,7 @@ export const consume = async (
 const getMessagesOrTimeout = async (
   messages: ConsumedMessage[],
   {
+    headerValueRegexFilter,
     multiple,
     regexFilter,
     timeout,
@@ -45,7 +49,7 @@ const getMessagesOrTimeout = async (
   const timeoutMs = timeout ? timeout * SECOND_MS : MAX_QUERY_TIME_MS;
 
   while (!res && elapsedTime < timeoutMs) {
-    res = findMessageByRegex(messages, regexFilter, multiple);
+    res = findMessageByRegex(messages, headerValueRegexFilter, regexFilter, multiple);
     if (res) {
       break;
     }
@@ -56,35 +60,28 @@ const getMessagesOrTimeout = async (
   return res;
 };
 
-type MessageOrTimeoutOptions = Pick<ConsumeOptions, 'multiple' | 'regexFilter' | 'timeout'>;
+type MessageOrTimeoutOptions = Pick<ConsumeOptions, 'headerValueRegexFilter' | 'multiple' | 'regexFilter' | 'timeout'>;
 
-const findMessageByRegex = (messages: ConsumedMessage[], regexFilter?: string, multiple?: number): ConsumedMessage[] | undefined => {
-  if (regexFilter) {
-    messages = filterMessages(messages, regexFilter);
+const findMessageByRegex = (messages: ConsumedMessage[], headerValueRegexFilter?:string, regexFilter?: string, multiple?: number): ConsumedMessage[] | undefined => {
+  if (regexFilter && headerValueRegexFilter) {
+    messages = filterMessages(messages, headerValueRegexFilter, regexFilter);
   }
   return getLatestNMessages(messages, multiple);
 };
 
-export const filterMessages = (messages: ConsumedMessage[], regexFilter: string): ConsumedMessage[] => {
+export const filterMessages = (messages: ConsumedMessage[], headerValueRegexFilter: string, regexFilter: string): ConsumedMessage[] => {
   log.debug({ messages, regexFilter }, 'Filtering messages by regex');
   const regex = new RegExp(regexFilter);
-  const filteredByHeader = filterByHeaders(regex, messages);
-  const filteredMessages = messages.filter((message) => regex.test(message.value || ''));
-  messages = filteredMessages.concat(filteredByHeader);
+  const headerValueRegex = new RegExp(headerValueRegexFilter);
+  const filteredMessages = messages.filter((message) => regex.test(message.value || '') || hasMatchingHeader(message.headers, headerValueRegex));
+  messages = filteredMessages;
   return messages;
 };
 
-const filterByHeaders = (regex: RegExp, messages: ConsumedMessage[]): ConsumedMessage[] => {
-  return messages.filter((message) => {
-    if (!message.headers || Object.keys(message.headers).length === 0) {
-      return false;
-    } else {
-      return hasMatchingHeader(message.headers, regex);
-    }
-  });
-};
-
-const hasMatchingHeader = (headers: { [key: string]: string | undefined }, regex: RegExp): boolean => {
+const hasMatchingHeader = (headers: { [key: string]: string | undefined } | undefined, regex: RegExp): boolean => {
+  if (isEmpty(headers)) {
+    return false;
+  }
   return Object.keys(headers).some((key) => {
     const value = headers[key];
     return typeof value === 'string' && regex.test(value);
