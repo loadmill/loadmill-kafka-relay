@@ -90,10 +90,7 @@ const hasMatchingHeader = (headers: { [key: string]: string | undefined } | unde
   if (isEmpty(headers)) {
     return false;
   }
-  return Object.keys(headers).some((key) => {
-    const value = headers[key];
-    return typeof value === 'string' && regex.test(value);
-  });
+  return Object.values(headers).some((value) => value && regex.test(value));
 };
 
 const getLatestNMessages = (messages: ConsumedMessage[], n: number = 1): ConsumedMessage[] | undefined => {

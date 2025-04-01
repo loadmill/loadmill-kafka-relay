@@ -147,6 +147,7 @@ If no message is available, the relay waits for 1 second and tries to consume ag
 
 Optional query parameters:
 - `filter` (string, optional): A regular expression to filter the topic's messages by.
+- `headerFilter` (string, optional): A regular expression to filter the topic's messages by a header value.
 - `multiple` (number, optional): The number of messages to consume. Will return the latest `multiple` messages. Minimum value is 1, maximum value is 100. Defaults to 1.
 - `timeout` (number, optional): The maximum time (in seconds) to wait for a message to be available. If no message is available after the timeout, an error will be returned. Minimum value is 5, maximum value is 25. Defaults to 25.
 - `text` (boolean, optional): Whether to return the message value as a string (and not parse it as JSON). Defaults to false.
@@ -183,6 +184,11 @@ GET /consume/c8bf8b9b-5bb6-4f17-babd-3d027eb7ad55?filter=myregex&timeout=7
 Example Request 4 (using multiple messages option):
 ```http
 GET /consume/c8bf8b9b-5bb6-4f17-babd-3d027eb7ad55?multiple=2
+```
+
+Example Request 5 (using a header filter):
+```http
+GET /consume/c8bf8b9b-5bb6-4f17-babd-3d027eb7ad55?headerFilter=myheaderregex
 ```
 
 Example Response 4 (using multiple messages option):
