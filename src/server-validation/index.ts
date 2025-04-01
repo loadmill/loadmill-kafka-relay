@@ -129,6 +129,7 @@ export const consumeValidationSchema: FastifySchema = {
     type: 'object',
     properties: {
       filter: { type: 'string', format: 'regex' },
+      headerFilter: { type: 'string', format: 'regex' },
       multiple: {
         type: 'string',
         format: 'int32',

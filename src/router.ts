@@ -65,10 +65,11 @@ app.delete('/subscriptions/:id', async (request) => {
 app.get('/consume/:id', { schema: consumeValidationSchema }, async (request) => {
   const { id } = request.params as { id: string };
 
-  const { filter: regexFilter, multiple, text, timeout } = request.query as {
-    filter?: string; multiple?: number; text?: string; timeout?: number;
+  const { headerFilter: headerValueRegexFilter, filter: regexFilter, multiple, text, timeout } = request.query as {
+    filter?: string; headerFilter?: string; multiple?: number; text?: string; timeout?: number;
   };
   const consumeOptions = {
+    headerValueRegexFilter,
     multiple,
     regexFilter,
     text,
