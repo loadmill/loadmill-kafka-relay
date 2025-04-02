@@ -12,9 +12,11 @@
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx --color",
     "postinstall": "patch-package",
     "start": "node --no-experimental-fetch dist",
-    "test": "jest"
+    "test": "node --no-experimental-fetch node_modules/.bin/jest"
   },
   "devDependencies": {
+    "@types/jest": "^29.5.2",
+    "@types/lodash": "^4.17.16",
     "@types/node": "^18.16.3",
     "@types/qs": "^6.9.7",
     "@typescript-eslint/eslint-plugin": "^5.59.11",
@@ -24,6 +26,7 @@
     "eslint-plugin-eslint-comments": "^3.2.0",
     "eslint-plugin-typescript-sort-keys": "^2.3.0",
     "eslint-plugin-unused-imports": "^2.0.0",
+    "jest": "^29.6.1",
     "nodemon": "^2.0.22",
     "npm-run-all": "^4.1.5",
     "rimraf": "^5.0.0",
@@ -33,7 +36,6 @@
   "dependencies": {
     "@kafkajs/confluent-schema-registry": "^3.3.0",
     "@ovotech/avro-decimal": "^0.1.5",
-    "@types/jest": "^29.5.2",
     "ajv": "^8.12.0",
     "ajv-errors": "^3.0.0",
     "ajv-formats": "^2.1.1",
@@ -41,7 +43,6 @@
     "decimal.js": "^10.4.3",
     "dotenv": "^16.0.3",
     "fastify": "^4.17.0",
-    "jest": "^29.6.1",
     "kafkajs": "^2.2.4",
     "kafkajs-lz4": "^2.0.0-beta.0",
     "lodash": "^4.17.16",
@@ -52,6 +53,6 @@
     "qs": "^6.11.1",
     "redis": "^4.6.15",
     "ts-jest": "^29.1.1",
-    "uri-js": "^4.4.1",
+    "uri-js": "^4.4.1"
   }
 }
