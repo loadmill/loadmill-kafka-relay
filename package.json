@@ -7,8 +7,8 @@
   "scripts": {
     "build": "yarn clean && yarn lint && tsc && yarn test",
     "clean": "rimraf ./dist",
-    "dev": "nodemon src/index.ts",
-    "dev:watch": "nodemon --inspect=0.0.0.0:9221 src/index.ts",
+    "dev": "nodemon --no-experimental-fetch src/index.ts",
+    "dev:watch": "nodemon --inspect=0.0.0.0:9221 --no-experimental-fetch src/index.ts",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx --color",
     "postinstall": "patch-package",
     "start": "node --no-experimental-fetch dist",
