@@ -10,6 +10,7 @@ import { Subscriber, Subscribers } from './subscriber';
 
 export class SubscribersManager {
   protected readonly subscribers: Subscribers = {};
+  protected intervalId: NodeJS.Timeout | null = null;
 
   constructor() {
     this.startDeletingExpiredSubscribers();
@@ -55,7 +56,14 @@ export class SubscribersManager {
   };
 
   protected startDeletingExpiredSubscribers = (): void => {
-    setInterval(() => this.deleteExpiredSubscribers(), SUBSCRIBER_EXPIRY_CHECK_INTERVAL_MS);
+    this.intervalId = setInterval(() => this.deleteExpiredSubscribers(), SUBSCRIBER_EXPIRY_CHECK_INTERVAL_MS);
+  };
+
+  public stopDeletingExpiredSubscribers = (): void => {
+    if (this.intervalId) {
+      clearInterval(this.intervalId);
+      this.intervalId = null;
+    }
   };
 
   protected deleteExpiredSubscribers = async (): Promise<void> => {
