@@ -1,4 +1,4 @@
-FROM node:14.18.0-alpine
+FROM node:18.20.5-alpine
 
 WORKDIR /usr/src/app/loadmill-kafka-relay
 
@@ -7,4 +7,4 @@ RUN yarn install
 RUN yarn build
 
 EXPOSE 3000
-CMD ["node", "dist"]
+CMD ["yarn", "start"]
