@@ -7,4 +7,4 @@ RUN yarn install
 RUN yarn build
 
 EXPOSE 3000
-CMD ["yarn", "start"]
+CMD ["node", "--no-experimental-fetch", "dist"]
