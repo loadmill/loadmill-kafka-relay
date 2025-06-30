@@ -2,15 +2,23 @@ import { Decimal } from 'decimal.js';
 
 import { ClientError } from '../errors';
 import log from '../log';
-import { Convertable, ConvertOption, ConvertType } from '../types';
+import {
+  Convertable,
+  ConvertOption,
+  ConvertType,
+  isPrimitive,
+} from '../types';
 
 import { deepModifyObject } from './deep-modify-object';
 
 export const convert = async (obj: Convertable, conversions: ConvertOption[]): Promise<void> => {
   await deepModifyObject(
-    obj,
-    async (key: string, value: unknown, obj: { [key: string]: unknown }) =>
-      await _convert(key, value, obj, conversions),
+    obj as { [key: string]: unknown },
+    async (key: string, value: unknown, obj: { [key: string]: unknown }) => {
+      if (isPrimitive(value)) {
+        await _convert(key, value, obj, conversions);
+      }
+    },
   );
 };
 

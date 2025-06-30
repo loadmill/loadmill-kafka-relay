@@ -9,9 +9,13 @@ export type ProduceParams = SubscribeParams & {
 };
 
 export type ProduceMessage = {
-  headers: IHeaders;
+  headers: ProduceMessageHeaders;
   key?: string;
   value: Convertable;
+};
+
+export type ProduceMessageHeaders = IHeaders | {
+  [key: string]: Buffer | string | (Buffer | string)[] | undefined | object;
 };
 
 export type Primitive = string | number | boolean;
