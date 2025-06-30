@@ -69,7 +69,7 @@ const prepareHeaders = async (
   encodeOptions?: EncodeProduceOptions,
 ): Promise<IHeaders> => {
   await encodeHeaders(headers, encodeOptions);
-  return headers;
+  return headers as IHeaders;
 };
 
 const prepareValue = async (value: ProduceMessage['value'], encodeOptions?: EncodeProduceOptions) =>

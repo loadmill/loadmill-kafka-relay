@@ -1,8 +1,8 @@
 import { isPrimitive } from '../types';
 
-export const deepModifyObject = async (
-  obj: unknown,
-  callback: (key: string, value: unknown, obj: { [key: string]: unknown }) => void | Promise<void>,
+export const deepModifyObject = async <T extends object>(
+  obj: T,
+  callback: (key: string, value: T[keyof T], obj: T) => void | Promise<void>,
 ): Promise<void> => {
   if (obj == null) {
     return;
@@ -14,10 +14,10 @@ export const deepModifyObject = async (
     }
   } else if (typeof obj === 'object') {
     for (const [key, value] of Object.entries(obj)) {
-      if (value !== null && (typeof value === 'object' || Array.isArray(value))) {
+      await callback(key, value, obj);
+
+      if (value !== null && !isPrimitive(value)) {
         await deepModifyObject(value, callback);
-      } else {
-        await callback(key, value, obj as { [key: string]: unknown });
       }
     }
   }
