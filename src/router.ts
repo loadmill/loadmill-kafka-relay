@@ -3,6 +3,7 @@ import Fastify from 'fastify';
 import { APP_NAME } from './constants';
 import { ClientError } from './errors';
 import { injectEnvVars } from './inject-env';
+import { getConnectionTimeout } from './kafka/connection-timeout';
 import { consume } from './kafka/consume';
 import { getDebugData } from './kafka/debug';
 import { produceMessage } from './kafka/produce';
@@ -45,7 +46,15 @@ app.post('/subscribe', {
   schema: subscribeValidationSchema,
 }, async (request) => {
   const { brokers, connectionTimeout, topic, sasl, ssl, timestamp } = request.body as SubscribeParams & SubscribeOptions;
-  const { id } = await subscribe({ brokers, topic }, { connectionTimeout, sasl, ssl, timestamp });
+  const { id } = await subscribe(
+    { brokers, topic },
+    {
+      connectionTimeout: getConnectionTimeout(connectionTimeout),
+      sasl,
+      ssl,
+      timestamp,
+    },
+  );
   return { id };
 });
 
@@ -92,7 +101,16 @@ app.post('/produce', {
   schema: produceValidationSchema,
 }, async (request) => {
   const { brokers, connectionTimeout, conversions, encode, message, topic, sasl, ssl } = request.body as ProduceParams & ProduceOptions;
-  const recordMetaData = await produceMessage({ brokers, message, topic }, { connectionTimeout, conversions, encode, sasl, ssl });
+  const recordMetaData = await produceMessage(
+    { brokers, message, topic },
+    {
+      connectionTimeout: getConnectionTimeout(connectionTimeout),
+      conversions,
+      encode,
+      sasl,
+      ssl,
+    },
+  );
   return recordMetaData;
 });
 

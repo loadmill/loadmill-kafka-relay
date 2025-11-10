@@ -108,7 +108,7 @@ To subscribe to a Kafka topic and start receiving messages, send a POST request 
   - `brokers` (array of strings): The list of Kafka brokers.
   - `topic` (string): The Kafka topic to subscribe to.
 - Optional parameters:
-  - `connectionTimeout` (number, optional): The connection timeout in milliseconds for the Kafka brokers. Minimum value is 1000 ms, maximum value is 30000 ms (30 seconds). Defaults to 1000 ms (1 second).
+  - `connectionTimeout` (number, optional): The connection timeout in milliseconds for the Kafka brokers. Minimum value is 1000 ms, maximum value is 30000 ms (30 seconds). Defaults to 1000 ms (1 second). Can also be set via the `CONNECTION_TIMEOUT` environment variable.
   - `ssl` (boolean, optional): Whether to use SSL for the Kafka brokers.
   - `sasl` (object, optional): SASL authentication credentials for the Kafka brokers.
     - `mechanism` (string): The SASL mechanism to use for authentication.
@@ -257,7 +257,7 @@ To produce a message to a Kafka topic, send a POST request to the `/produce` end
     - `key` (string, optional): The key of the message.
     - `headers` (object, optional): The headers of the message.
 - Optional Parameters:
-  - `connectionTimeout` (number, optional): The connection timeout in milliseconds for the Kafka brokers. Minimum value is 1000 ms, maximum value is 30000 ms (30 seconds). Defaults to 1000 ms (1 second).
+  - `connectionTimeout` (number, optional): The connection timeout in milliseconds for the Kafka brokers. Minimum value is 1000 ms, maximum value is 30000 ms (30 seconds). Defaults to 1000 ms (1 second). Can also be set via the `CONNECTION_TIMEOUT` environment variable.
   - `conversions` (array, optional): Options for certain keys inside the message value and headers. Currently supports only `decimal` and `bytes` conversions. (Note: For `bytes` conversion, the value must be an encoded base64 string. See example below.)
     Each item in the array should be an object with the following keys:
     - `key` (string): The key to convert.
@@ -482,6 +482,7 @@ You may use the following environment variables in this app:
 
 ```bash
 LOADMILL_KAFKA_SERVER_PORT= # The port on which the server will listen, defaults to 3000
+CONNECTION_TIMEOUT=         # The connection timeout (in milliseconds) for Kafka subscribe and produce operations. Minimum: 1000, Maximum: 30000, Default: 1000
 ```
 ### Debugging
 
