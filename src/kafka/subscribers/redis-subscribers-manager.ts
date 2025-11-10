@@ -117,9 +117,9 @@ export class RedisSubscribersManager extends SubscribersManager {
 
   add = async (
     { brokers, topic }: SubscribeParams,
-    { sasl, ssl }: SubscribeOptions,
+    { connectionTimeout, sasl, ssl }: SubscribeOptions,
   ): Promise<RedisSubscriber> => {
-    const subscriber = new RedisSubscriber({ brokers, topic }, { sasl, ssl });
+    const subscriber = new RedisSubscriber({ brokers, topic }, { connectionTimeout, sasl, ssl });
 
     await this.addSubscriberToRedis(subscriber);
 
@@ -222,10 +222,10 @@ export class RedisSubscribersManager extends SubscribersManager {
     if (serializedSubscriber) {
       log.debug({ subscriberId }, 'Recreating subscriber from Redis');
       const { instanceId, kafkaConfig, timeOfSubscription, topic } = JSON.parse(serializedSubscriber) as SerializedRedisSubscriber;
-      const { brokers, sasl, ssl } = kafkaConfig;
+      const { brokers, connectionTimeout, sasl, ssl } = kafkaConfig;
       const subscriber = new RedisSubscriber(
         { brokers, topic },
-        { sasl, ssl },
+        { connectionTimeout, sasl, ssl },
         { id: subscriberId, timeOfSubscription },
         debug && { instanceId },
       );

@@ -13,22 +13,23 @@ export class Subscriber {
   consumer: Consumer;
   id: string;
   kafka: Kafka;
-  kafkaConfig: { brokers: string[] } & Pick<KafkaConfig, 'sasl' | 'ssl'>;
+  kafkaConfig: { brokers: string[] } & Pick<KafkaConfig, 'connectionTimeout' | 'sasl' | 'ssl'>;
   protected messages: ConsumedMessage[] = [];
   timeOfSubscription: number;
   topic: string;
 
   constructor(
     { brokers, topic }: SubscribeParams,
-    { sasl, ssl }: SubscribeOptions,
+    { connectionTimeout, sasl, ssl }: SubscribeOptions,
     id?: string,
   ) {
     this.timeOfSubscription = Date.now();
     this.topic = topic;
-    this.kafkaConfig = { brokers, sasl, ssl };
+    this.kafkaConfig = { brokers, connectionTimeout, sasl, ssl };
     this.kafka = new Kafka({
       brokers: prepareBrokers(brokers),
       clientId: APP_NAME,
+      connectionTimeout,
       logCreator: kafkaLogCreator,
       sasl,
       ssl,

@@ -18,9 +18,9 @@ export class SubscribersManager {
 
   add = (
     { brokers, topic }: SubscribeParams,
-    { sasl, ssl }: SubscribeOptions,
+    { connectionTimeout, sasl, ssl }: SubscribeOptions,
   ): Subscriber | Promise<Subscriber> => {
-    const subscriber = new Subscriber({ brokers, topic }, { sasl, ssl });
+    const subscriber = new Subscriber({ brokers, topic }, { connectionTimeout, sasl, ssl });
     this.subscribers[subscriber.id] = subscriber;
     return subscriber;
   };

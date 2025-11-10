@@ -44,7 +44,7 @@ export type SubscribeParams = {
   topic: string;
 };
 
-export type SubscribeOptions = Pick<KafkaConfig, 'sasl' | 'ssl'> & {
+export type SubscribeOptions = Pick<KafkaConfig, 'connectionTimeout' | 'sasl' | 'ssl'> & {
   timestamp?: number;
 };
 
