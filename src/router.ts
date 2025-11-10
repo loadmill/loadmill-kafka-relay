@@ -44,8 +44,8 @@ app.post('/subscribe', {
   preValidation: injectEnvVars,
   schema: subscribeValidationSchema,
 }, async (request) => {
-  const { brokers, topic, sasl, ssl, timestamp } = request.body as SubscribeParams & SubscribeOptions;
-  const { id } = await subscribe({ brokers, topic }, { sasl, ssl, timestamp });
+  const { brokers, connectionTimeout, topic, sasl, ssl, timestamp } = request.body as SubscribeParams & SubscribeOptions;
+  const { id } = await subscribe({ brokers, topic }, { connectionTimeout, sasl, ssl, timestamp });
   return { id };
 });
 
@@ -91,8 +91,8 @@ app.post('/produce', {
   preValidation: injectEnvVars,
   schema: produceValidationSchema,
 }, async (request) => {
-  const { brokers, conversions, encode, message, topic, sasl, ssl } = request.body as ProduceParams & ProduceOptions;
-  const recordMetaData = await produceMessage({ brokers, message, topic }, { conversions, encode, sasl, ssl });
+  const { brokers, connectionTimeout, conversions, encode, message, topic, sasl, ssl } = request.body as ProduceParams & ProduceOptions;
+  const recordMetaData = await produceMessage({ brokers, message, topic }, { connectionTimeout, conversions, encode, sasl, ssl });
   return recordMetaData;
 });
 

@@ -7,6 +7,8 @@ const brokers = {
 
 const topic = { type: 'string' };
 
+const connectionTimeout = { type: 'number', minimum: 1000, maximum: 30000 };
+
 const sasl = {
   additionalProperties: false,
   type: 'object',
@@ -85,6 +87,7 @@ export const produceValidationSchema: FastifySchema = {
     type: 'object',
     properties: {
       brokers,
+      connectionTimeout,
       topic,
       message,
       conversions,
@@ -103,6 +106,7 @@ export const subscribeValidationSchema: FastifySchema = {
     properties: {
       brokers,
       topic,
+      connectionTimeout,
       sasl,
       ssl,
       timestamp: {

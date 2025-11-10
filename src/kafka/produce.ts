@@ -21,11 +21,12 @@ export const produceMessage = async (
   { brokers, message, topic }: ProduceParams,
   options: ProduceOptions,
 ): Promise<RecordMetadata> => {
-  const { sasl, ssl } = options;
+  const { connectionTimeout, sasl, ssl } = options;
 
   const kafka = new Kafka({
     brokers: prepareBrokers(brokers),
     clientId: APP_NAME,
+    connectionTimeout,
     logCreator: kafkaLogCreator,
     sasl,
     ssl,
