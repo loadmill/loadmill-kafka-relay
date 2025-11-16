@@ -34,6 +34,7 @@
     "typescript": "^5.0.4"
   },
   "dependencies": {
+    "@confluentinc/kafka-javascript": "^1.6.0",
     "@kafkajs/confluent-schema-registry": "^3.3.0",
     "@ovotech/avro-decimal": "^0.1.5",
     "ajv": "^8.12.0",

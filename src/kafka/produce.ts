@@ -1,6 +1,7 @@
-import { IHeaders, Kafka, Partitioners, RecordMetadata } from 'kafkajs';
+import { IHeaders, RecordMetadata } from '@confluentinc/kafka-javascript/types/kafkajs';
 
 import { APP_NAME } from '../constants';
+import log from '../log';
 import {
   ConvertOption,
   EncodeProduceOptions,
@@ -12,7 +13,7 @@ import {
 import { prepareBrokers } from './brokers';
 import { convert } from './convert';
 import { encodeHeaders } from './encode-headers';
-import { kafkaLogCreator } from './log-creator';
+import { Kafka } from './kafkajs';
 import {
   encode,
 } from './schema-registry';
@@ -21,19 +22,19 @@ export const produceMessage = async (
   { brokers, message, topic }: ProduceParams,
   options: ProduceOptions,
 ): Promise<RecordMetadata> => {
-  const { connectionTimeout, sasl, ssl } = options;
+  const { connectionTimeout, sasl, ssl = false } = options;
 
   const kafka = new Kafka({
-    brokers: prepareBrokers(brokers),
-    clientId: APP_NAME,
-    connectionTimeout,
-    logCreator: kafkaLogCreator,
-    sasl,
-    ssl,
+    kafkaJS: {
+      brokers: prepareBrokers(brokers),
+      clientId: APP_NAME,
+      connectionTimeout,
+      logger: log,
+      ...(sasl && { sasl }),
+      ssl,
+    },
   });
-  const producer = kafka.producer({
-    createPartitioner: Partitioners.LegacyPartitioner,
-  });
+  const producer = kafka.producer({});
   await producer.connect();
 
   const [recordMetaData] = await producer.send({

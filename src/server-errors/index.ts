@@ -1,10 +1,10 @@
 import { ConfluentSchemaRegistryError } from '@kafkajs/confluent-schema-registry/dist/errors';
 import { FastifyError, FastifyReply, FastifyRequest } from 'fastify';
-import { KafkaJSError } from 'kafkajs';
 
 import { ClientError } from '../errors';
+import { isKafkaJSError, KafkaJSError } from '../kafka/kafkajs';
 
-type ErrorType = ClientError | FastifyError | KafkaJSError | ConfluentSchemaRegistryError;
+type ErrorType = ClientError | FastifyError | ConfluentSchemaRegistryError | KafkaJSError;
 
 type ResponseError = {
   message: string;
@@ -40,7 +40,7 @@ export const serverErrorHandler = (
   } else if (error instanceof ClientError) {
     void reply.code(error.statusCode);
     message = error.message;
-  } else if (error instanceof KafkaJSError) {
+  } else if (isKafkaJSError(error as KafkaJSError)) {
     void reply.code(400);
     message = error.message;
   } else if (statusCode) { // error instanceof FastifyError

@@ -1,4 +1,5 @@
-import { EachMessagePayload } from 'kafkajs';
+
+import { EachMessagePayload } from '@confluentinc/kafka-javascript/types/kafkajs';
 
 import { thisRelayInstanceId } from '../../multi-instance';
 import { getRedisClient } from '../../redis/redis-client';

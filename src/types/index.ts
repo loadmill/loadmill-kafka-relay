@@ -1,6 +1,6 @@
 import { UUID } from 'crypto';
 
-import { IHeaders, KafkaConfig, KafkaMessage } from 'kafkajs';
+import { IHeaders, KafkaConfig, KafkaMessage } from '@confluentinc/kafka-javascript/types/kafkajs';
 
 export type KafkaMessages = (Omit<KafkaMessage, 'value'> & { value?: string })[];
 
