@@ -10,8 +10,8 @@ import {
 import { APP_NAME } from '../../constants';
 import log from '../../log';
 import { ConsumedMessage, SubscribeOptions, SubscribeParams } from '../../types';
+import { Kafka, KafkaType } from '../../types/kafkajs-confluent';
 import { prepareBrokers } from '../brokers';
-import { Kafka, KafkaType } from '../kafkajs';
 
 import { fromKafkaToConsumedMessage } from './messages';
 

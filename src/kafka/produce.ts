@@ -9,11 +9,12 @@ import {
   ProduceOptions,
   ProduceParams,
 } from '../types';
+import { Kafka } from '../types/kafkajs-confluent';
 
 import { prepareBrokers } from './brokers';
+import { compressionCodec } from './compression-codec';
 import { convert } from './convert';
 import { encodeHeaders } from './encode-headers';
-import { Kafka } from './kafkajs';
 import {
   encode,
 } from './schema-registry';
@@ -34,7 +35,11 @@ export const produceMessage = async (
       ssl,
     },
   });
-  const producer = kafka.producer({});
+  const producer = kafka.producer({
+    kafkaJS: {
+      ...(compressionCodec && { compression: compressionCodec }),
+    },
+  });
   await producer.connect();
 
   const [recordMetaData] = await producer.send({

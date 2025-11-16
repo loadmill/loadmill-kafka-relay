@@ -2,7 +2,7 @@ import { ConfluentSchemaRegistryError } from '@kafkajs/confluent-schema-registry
 import { FastifyError, FastifyReply, FastifyRequest } from 'fastify';
 
 import { ClientError } from '../errors';
-import { isKafkaJSError, KafkaJSError } from '../kafka/kafkajs';
+import { isKafkaJSError, KafkaJSError } from '../types/kafkajs-confluent';
 
 type ErrorType = ClientError | FastifyError | ConfluentSchemaRegistryError | KafkaJSError;
 
