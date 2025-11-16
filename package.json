@@ -14,6 +14,9 @@
     "start": "node --no-experimental-fetch dist",
     "test": "node --no-experimental-fetch node_modules/.bin/jest"
   },
+  "simple-git-hooks": {
+    "pre-commit": "yarn build"
+  },
   "devDependencies": {
     "@types/jest": "^29.5.2",
     "@types/lodash": "^4.17.16",
@@ -30,6 +33,7 @@
     "nodemon": "^2.0.22",
     "npm-run-all": "^4.1.5",
     "rimraf": "^5.0.0",
+    "simple-git-hooks": "^2.13.1",
     "ts-node": "^10.9.1",
     "typescript": "^5.0.4"
   },
