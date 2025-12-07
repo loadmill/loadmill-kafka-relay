@@ -1,9 +1,6 @@
 import 'dotenv/config';
 
-import {
-  handleKafkaCompressionEnvVars,
-  handleKafkaRegistryEnvVars,
-} from './kafka/schema-registry';
+import { handleKafkaRegistryEnvVars } from './kafka/schema-registry';
 import log from './log';
 import {
   initializeMultiInstance,
@@ -18,7 +15,5 @@ if (isMultiInstance()) {
 } else {
   log.info('This Relay runs in single instance mode');
 }
-
-handleKafkaCompressionEnvVars();
 
 void handleKafkaRegistryEnvVars();

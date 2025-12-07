@@ -13,7 +13,7 @@ import {
   isSubscriberExists,
   removeSubscriber,
 } from './kafka/subscribers';
-import log from './log';
+import { pinoLogger } from './log/pino-pretty-logger';
 import { serverErrorHandler } from './server-errors';
 import {
   consumeValidationSchema,
@@ -34,7 +34,7 @@ import {
 } from './types';
 
 const app = Fastify({
-  logger: log,
+  logger: pinoLogger,
 });
 
 app.get('/', async () => {

@@ -1,6 +1,7 @@
-import { IHeaders, Kafka, Partitioners, RecordMetadata } from 'kafkajs';
+import { IHeaders, RecordMetadata } from '@confluentinc/kafka-javascript/types/kafkajs';
 
 import { APP_NAME } from '../constants';
+import log from '../log';
 import {
   ConvertOption,
   EncodeProduceOptions,
@@ -8,11 +9,12 @@ import {
   ProduceOptions,
   ProduceParams,
 } from '../types';
+import { Kafka } from '../types/kafkajs-confluent';
 
 import { prepareBrokers } from './brokers';
+import { compressionCodec } from './compression-codec';
 import { convert } from './convert';
 import { encodeHeaders } from './encode-headers';
-import { kafkaLogCreator } from './log-creator';
 import {
   encode,
 } from './schema-registry';
@@ -21,18 +23,22 @@ export const produceMessage = async (
   { brokers, message, topic }: ProduceParams,
   options: ProduceOptions,
 ): Promise<RecordMetadata> => {
-  const { connectionTimeout, sasl, ssl } = options;
+  const { connectionTimeout, sasl, ssl = false } = options;
 
   const kafka = new Kafka({
-    brokers: prepareBrokers(brokers),
-    clientId: APP_NAME,
-    connectionTimeout,
-    logCreator: kafkaLogCreator,
-    sasl,
-    ssl,
+    kafkaJS: {
+      brokers: prepareBrokers(brokers),
+      clientId: APP_NAME,
+      connectionTimeout,
+      logger: log,
+      ...(sasl && { sasl }),
+      ssl,
+    },
   });
   const producer = kafka.producer({
-    createPartitioner: Partitioners.LegacyPartitioner,
+    kafkaJS: {
+      ...(compressionCodec && { compression: compressionCodec }),
+    },
   });
   await producer.connect();
 

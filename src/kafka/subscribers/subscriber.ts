@@ -1,18 +1,24 @@
 import { randomUUID } from 'crypto';
 
-import { Consumer, EachMessagePayload, Kafka, KafkaConfig, PartitionOffset } from 'kafkajs';
+import {
+  Consumer,
+  EachMessagePayload,
+  KafkaConfig,
+  PartitionOffset,
+} from '@confluentinc/kafka-javascript/types/kafkajs';
 
 import { APP_NAME } from '../../constants';
+import log from '../../log';
 import { ConsumedMessage, SubscribeOptions, SubscribeParams } from '../../types';
+import { Kafka, KafkaType } from '../../types/kafkajs-confluent';
 import { prepareBrokers } from '../brokers';
-import { kafkaLogCreator } from '../log-creator';
 
 import { fromKafkaToConsumedMessage } from './messages';
 
 export class Subscriber {
   consumer: Consumer;
   id: string;
-  kafka: Kafka;
+  kafka: KafkaType;
   kafkaConfig: { brokers: string[] } & Pick<KafkaConfig, 'connectionTimeout' | 'sasl' | 'ssl'>;
   protected messages: ConsumedMessage[] = [];
   timeOfSubscription: number;
@@ -20,22 +26,24 @@ export class Subscriber {
 
   constructor(
     { brokers, topic }: SubscribeParams,
-    { connectionTimeout, sasl, ssl }: SubscribeOptions,
+    { connectionTimeout, sasl, ssl = false }: SubscribeOptions,
     id?: string,
   ) {
     this.timeOfSubscription = Date.now();
     this.topic = topic;
     this.kafkaConfig = { brokers, connectionTimeout, sasl, ssl };
     this.kafka = new Kafka({
-      brokers: prepareBrokers(brokers),
-      clientId: APP_NAME,
-      connectionTimeout,
-      logCreator: kafkaLogCreator,
-      sasl,
-      ssl,
+      kafkaJS: {
+        brokers: prepareBrokers(brokers),
+        clientId: APP_NAME,
+        connectionTimeout,
+        logger: log,
+        ...(sasl && { sasl }),
+        ssl,
+      },
     });
     this.id = id || randomUUID();
-    this.consumer = this.kafka.consumer({ groupId: this.id });
+    this.consumer = this.kafka.consumer({ kafkaJS: { fromBeginning: false, groupId: this.id } });
   }
 
   async addMessage({ message }: EachMessagePayload): Promise<void> {
@@ -49,7 +57,7 @@ export class Subscriber {
   async subscribe(timestamp?: number): Promise<void> {
     await this.consumer.connect();
     const partitions = await getPartitionsByTimestamp(this.kafka, this.topic, timestamp);
-    await this.consumer.subscribe({ fromBeginning: false, topic: this.topic });
+    await this.consumer.subscribe({ topic: this.topic });
     await this.consumer.run({
       eachMessage: async (payload) => {
         await this.addMessage(payload);
@@ -60,7 +68,7 @@ export class Subscriber {
 }
 
 const getPartitionsByTimestamp = async (
-  kafka: Kafka,
+  kafka: KafkaType,
   topic: string,
   timestamp = get1MinuteAgoTimestamp(),
 ): Promise<PartitionOffset[]> => {

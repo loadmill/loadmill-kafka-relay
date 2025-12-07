@@ -1,8 +1,6 @@
 import { SchemaRegistry, SchemaType } from '@kafkajs/confluent-schema-registry';
 import { ConfluentSchemaRegistryArgumentError } from '@kafkajs/confluent-schema-registry/dist/errors';
 import { AvroDecimal } from '@ovotech/avro-decimal';
-import { CompressionCodecs, CompressionTypes } from 'kafkajs';
-import LZ4 from 'kafkajs-lz4';
 
 import { ClientError } from '../../errors';
 import log from '../../log';
@@ -40,13 +38,6 @@ export const handleKafkaRegistryEnvVars = async (): Promise<void> => {
       }
     }
     await initSchemaRegistry(registryOptions);
-  }
-};
-
-export const handleKafkaCompressionEnvVars = (): void => {
-  if (process.env.LOADMILL_KAFKA_LZ4_COMPRESSION_CODEC) {
-    log.debug('Handling Kafka compression environment variables');
-    CompressionCodecs[CompressionTypes.LZ4] = new LZ4().codec;
   }
 };
 

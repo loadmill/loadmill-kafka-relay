@@ -1,4 +1,5 @@
-import { KafkaMessage } from 'kafkajs';
+
+import { KafkaMessage } from '@confluentinc/kafka-javascript/types/kafkajs';
 
 import { getRedisClient } from '../../redis/redis-client';
 import { ConsumedMessage } from '../../types';
