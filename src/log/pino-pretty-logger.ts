@@ -2,36 +2,32 @@ import pino from 'pino';
 
 import { APP_NAME } from '../constants';
 
-const baseTargetOptions = {
-  ignore: 'pid,hostname',
-  translateTime: 'SYS:yyyy-mm-dd HH:MM:ss.l',
-};
+const isDevelopment = process.env.NODE_ENV === 'development';
 
-const baseTarget = {
-  level: process.env.LOG_LEVEL || 'info',
-  options: baseTargetOptions,
+const devLoggerConfig = {
+  level: 'debug',
+  options: {
+    colorize: true,
+    ignore: 'pid,hostname',
+    translateTime: 'SYS:yyyy-mm-dd HH:MM:ss.l',
+  },
   target: 'pino-pretty',
 };
 
-const stdoutTarget = {
-  ...baseTarget,
-  options: {
-    ...baseTargetOptions,
-    colorize: true,
-  },
+const fileLoggerConfig = {
+  level: process.env.LOG_LEVEL || 'info',
+  options: {},
+  target: 'pino/file',
 };
 
-if (process.env.NODE_ENV === 'development') {
-  stdoutTarget.level = 'debug';
-}
+const stdoutTarget = isDevelopment ? devLoggerConfig : fileLoggerConfig;
 
 const fileTarget = {
-  ...baseTarget,
+  level: isDevelopment ? 'debug' : process.env.LOG_LEVEL || 'info',
   options: {
-    ...baseTargetOptions,
-    colorize: false,
     destination: `${APP_NAME}.log`,
   },
+  target: 'pino/file',
 };
 
 const targets = [
