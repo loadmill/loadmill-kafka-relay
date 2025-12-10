@@ -53,7 +53,7 @@ const toShallowSubscribers = async (subscribers: Subscribers): Promise<DebugSubs
 const truncateMessages = (messages: ConsumedMessage[]): ConsumedMessage[] => {
   return messages.map((message) => {
     const { value, ...rest } = message;
-    let truncatedValue = value?.toString().slice(0, 10);
+    let truncatedValue = JSON.stringify(value)?.slice(0, 10);
     if (truncatedValue?.length > 10) {
       truncatedValue = truncatedValue + '...';
     }
