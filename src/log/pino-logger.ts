@@ -1,14 +1,18 @@
 import fs from 'fs';
 
-import pino from 'pino';
+import pino, {
+  multistream,
+  stdSerializers,
+  StreamEntry,
+  transport,
+} from 'pino';
 
 import { APP_NAME } from '../constants';
 
-const streams: pino.StreamEntry[] = [];
-
+const streams: StreamEntry[] = [];
 const addConsoleStream = () => {
   if (process.env.NODE_ENV === 'development') {
-    const prettyTransport = pino.transport({
+    const prettyTransport = transport({
       options: {
         colorize: true,
         ignore: 'pid,hostname',
@@ -39,8 +43,12 @@ const pinoLogger = pino(
       },
     },
     level: 'debug', // Must set base level to debug https://github.com/pinojs/pino/issues/1639#issuecomment-1418324692
+    serializers: {
+      err: stdSerializers.err,
+      error: stdSerializers.err,
+    },
   },
-  pino.multistream(streams, { dedupe: true }),
+  multistream(streams, { dedupe: true }),
 );
 
 export { pinoLogger };
