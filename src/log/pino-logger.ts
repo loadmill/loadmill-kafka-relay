@@ -44,7 +44,3 @@ const pinoLogger = pino(
 );
 
 export { pinoLogger };
-
-setTimeout(() => {
-  pinoLogger.debug('Pino is DEBUG enabled');
-}, 1);

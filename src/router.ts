@@ -13,7 +13,7 @@ import {
   isSubscriberExists,
   removeSubscriber,
 } from './kafka/subscribers';
-import { pinoLogger } from './log/pino-pretty-logger';
+import { pinoLogger } from './log/pino-logger';
 import { serverErrorHandler } from './server-errors';
 import {
   consumeValidationSchema,
