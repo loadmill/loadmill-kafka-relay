@@ -34,8 +34,8 @@ const createRedisClient = (clientType: RedisClientType): RedisClient => {
     const redisClient = createClient({
       socket: {
         reconnectStrategy: (retries: number) => {
-          if (retries > 100) {
-            return new Error('Too many retries');
+          if (retries > 3) {
+            return false;
           }
           return 0;
         },
@@ -43,7 +43,8 @@ const createRedisClient = (clientType: RedisClientType): RedisClient => {
       },
       url,
     });
-    void redisClient
+
+    redisClient
       .on('error', (error) => {
         log.error(error, `Redis ${clientType} Error`);
       })
@@ -52,12 +53,26 @@ const createRedisClient = (clientType: RedisClientType): RedisClient => {
       })
       .on('ready', () => {
         log.info({ url }, `Redis ${clientType} is Ready!`);
-      })
-      .connect();
+      });
+
+    void redisClient
+      .connect()
+      .catch((error) => {
+        _handleFatalRedisError(error as Error, clientType, 'connection');
+      });
 
     return redisClient;
   } catch (error) {
-    log.error(error);
-    process.exit(1);
+    return _handleFatalRedisError(error as Error, clientType, 'creation');
   }
+};
+
+const _handleFatalRedisError = (
+  error: Error,
+  clientType: RedisClientType,
+  operation: string,
+): never => {
+  log.error({ REDIS_URL: process.env.REDIS_URL, clientType, error }, `Fatal Redis ${clientType} Error during ${operation}`);
+  log.warn('Exiting process due to fatal Redis error');
+  process.exit(1);
 };
