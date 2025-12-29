@@ -2,6 +2,7 @@ import { createClient } from 'redis';
 
 import log from '../log';
 
+import { REDIS_CONNECT_RETRIES } from './constants';
 import { RedisClient } from './types';
 
 let redisClient: RedisClient;
@@ -34,7 +35,7 @@ const createRedisClient = (clientType: RedisClientType): RedisClient => {
     const redisClient = createClient({
       socket: {
         reconnectStrategy: (retries: number) => {
-          if (retries > 3) {
+          if (retries > REDIS_CONNECT_RETRIES) {
             return false;
           }
           return 0;

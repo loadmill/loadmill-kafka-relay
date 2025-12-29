@@ -550,6 +550,7 @@ To enable multi-instance mode, set the `REDIS_URL` environment variable to the U
 REDIS_URL=rediss://your-redis-host:6379
 # Optional:
 REDIS_TLS_REJECT_UNAUTHORIZED=false # If you're Redis instance is using a self-signed certificate
+REDIS_CONNECT_RETRIES=5 # The number of connection retries to Redis. Default: 10
 ```
 
 #### Behavior in Multi-Instance Mode
