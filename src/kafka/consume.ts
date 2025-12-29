@@ -16,7 +16,7 @@ export const consume = async (
   { headerValueRegexFilter, multiple, regexFilter, text, timeout }: ConsumeOptions,
 ): Promise<ConsumedMessage[]> => {
   const res = await getMessagesOrTimeout(
-    await getMessages(id),
+    () => getMessages(id),
     {
       headerValueRegexFilter,
       multiple,
@@ -35,7 +35,7 @@ export const consume = async (
 };
 
 const getMessagesOrTimeout = async (
-  messages: ConsumedMessage[],
+  getMessages: () => Promise<ConsumedMessage[]> | ConsumedMessage[],
   {
     headerValueRegexFilter,
     multiple,
@@ -49,6 +49,7 @@ const getMessagesOrTimeout = async (
   const timeoutMs = timeout ? timeout * SECOND_MS : MAX_QUERY_TIME_MS;
 
   while (!res && elapsedTime < timeoutMs) {
+    const messages = await getMessages();
     res = findMessageByRegex(messages, headerValueRegexFilter, regexFilter, multiple);
     if (res) {
       break;
