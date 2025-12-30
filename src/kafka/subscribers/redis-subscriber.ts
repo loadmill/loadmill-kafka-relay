@@ -1,6 +1,7 @@
 
 import { EachMessagePayload } from '@confluentinc/kafka-javascript/types/kafkajs';
 
+import log from '../../log';
 import { thisRelayInstanceId } from '../../multi-instance';
 import { getRedisClient } from '../../redis/redis-client';
 import { RedisClient } from '../../redis/types';
@@ -34,10 +35,13 @@ export class RedisSubscriber extends Subscriber {
     const serializedMessage = JSON.stringify(consumedMessage);
 
     const messagesKey = toMessagesKey(this.id);
-    await this.redisClient.multi()
+
+    const results = await this.redisClient.multi()
       .rPush(messagesKey, serializedMessage)
       .expire(messagesKey, MAX_SUBSCRIBER_TTL_SECONDS)
       .exec();
+
+    log.info({ messagesKey, redisSyncResult: results });
   }
 
   async getMessages(subscriberId: string = this.id): Promise<ConsumedMessage[]> {

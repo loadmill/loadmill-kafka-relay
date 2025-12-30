@@ -30,7 +30,13 @@ export const fromKafkaToConsumedMessage = async (message: KafkaMessage): Promise
 export const getMessagesFromRedis = async (subscriberId: string): Promise<ConsumedMessage[]> => {
   const serializedMessages = await getRedisClient().lRange(toMessagesKey(subscriberId), 0, -1);
   const messages = serializedMessages.map(
-    (message: string) => JSON.parse(message) as ConsumedMessage,
+    (message: string) => {
+      const parsed = JSON.parse(message);
+      if (parsed.value && typeof parsed.value !== 'string') {
+        parsed.value = JSON.stringify(parsed.value);
+      }
+      return parsed as ConsumedMessage;
+    },
   );
   return messages;
 };
