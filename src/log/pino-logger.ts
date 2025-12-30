@@ -1,6 +1,7 @@
 import fs from 'fs';
 
 import pino, {
+  Level,
   multistream,
   stdSerializers,
   StreamEntry,
@@ -8,6 +9,16 @@ import pino, {
 } from 'pino';
 
 import { APP_NAME } from '../constants';
+
+const getLogLevel = (): Level => {
+  if (process.env.LOG_LEVEL) {
+    return process.env.LOG_LEVEL as Level;
+  }
+  if (process.env.NODE_ENV === 'development') {
+    return 'debug';
+  }
+  return 'info';
+};
 
 const streams: StreamEntry[] = [];
 const addConsoleStream = () => {
@@ -20,14 +31,14 @@ const addConsoleStream = () => {
       },
       target: 'pino-pretty',
     });
-    streams.push({ level: 'debug', stream: prettyTransport });
+    streams.push({ level: getLogLevel(), stream: prettyTransport });
   } else {
-    streams.push({ level: 'info', stream: process.stdout });
+    streams.push({ level: getLogLevel(), stream: process.stdout });
   }
 };
 const addFileStream = () => {
   streams.push({
-    level: process.env.LOG_LEVEL === 'debug' ? 'debug' : 'info',
+    level: getLogLevel(),
     stream: fs.createWriteStream(`${APP_NAME}.log`, { flags: 'a' }),
   });
 };
