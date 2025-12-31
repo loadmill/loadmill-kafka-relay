@@ -81,7 +81,8 @@ export const filterMessages = (
   const headerRegex = headerValueRegexFilter ? new RegExp(headerValueRegexFilter) : null;
 
   return messages.filter((message) => {
-    const valueMatch = valueRegex?.test(message.value || '');
+    const valueAsString = String(message.value || '');
+    const valueMatch = valueRegex?.test(valueAsString);
     const headerMatch = headerRegex ? hasMatchingHeader(message.headers, headerRegex) : false;
     return valueMatch || headerMatch;
   });
