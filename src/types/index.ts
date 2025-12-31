@@ -1,6 +1,7 @@
 import { UUID } from 'crypto';
 
 import { IHeaders, KafkaConfig, KafkaMessage } from '@confluentinc/kafka-javascript/types/kafkajs';
+import { Type } from 'avsc';
 
 export type KafkaMessages = (Omit<KafkaMessage, 'value'> & { value?: string })[];
 
@@ -60,11 +61,13 @@ export type ConsumeOptions = {
   timeout?: number; /** in seconds */
 };
 
+type AvroDecodedValue = Type;
+
 export type ConsumedMessage = {
   headers?: { [key: string]: string | undefined };
   key?: string | null;
   timestamp: string;
-  value: string;
+  value: string | AvroDecodedValue;
 };
 
 export type RegistryOptions = {

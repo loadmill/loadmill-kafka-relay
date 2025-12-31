@@ -31,8 +31,18 @@ export class RedisSubscriber extends Subscriber {
 
   async addMessage({ message }: EachMessagePayload): Promise<void> {
     const consumedMessage = await fromKafkaToConsumedMessage(message);
-    const serializedMessage = JSON.stringify(consumedMessage);
 
+    // Normalize the value to ensure Avro union types are type mapped
+    const normalizedValue = typeof consumedMessage.value === 'string'
+      ? consumedMessage.value
+      : JSON.parse(consumedMessage.value.toString());
+
+    const messageToStore = {
+      ...consumedMessage,
+      value: normalizedValue,
+    };
+
+    const serializedMessage = JSON.stringify(messageToStore);
     const messagesKey = toMessagesKey(this.id);
 
     await this.redisClient.multi()
