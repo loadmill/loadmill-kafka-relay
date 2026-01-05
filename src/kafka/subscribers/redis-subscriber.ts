@@ -6,13 +6,14 @@ import { getRedisClient } from '../../redis/redis-client';
 import { RedisClient } from '../../redis/types';
 import { ConsumedMessage, SubscribeOptions, SubscribeParams } from '../../types';
 
-import { MAX_SUBSCRIBER_TTL_SECONDS } from './constants';
+import { MAX_TOPIC_MESSAGES_LENGTH, TOPIC_MESSAGES_TTL_SECONDS } from './constants';
 import {
   fromKafkaToConsumedMessage,
   getMessagesFromRedis,
 } from './messages';
-import { toMessagesKey } from './redis-keys';
+import { toTopicMessagesKey } from './redis-keys';
 import { ShallowSubscriber, Subscriber } from './subscriber';
+import { ensureTopicConsumerRunning } from './topic-consumers-manager';
 
 export class RedisSubscriber extends Subscriber {
   private redisClient: RedisClient = getRedisClient();
@@ -43,16 +44,32 @@ export class RedisSubscriber extends Subscriber {
     };
 
     const serializedMessage = JSON.stringify(messageToStore);
-    const messagesKey = toMessagesKey(this.id);
+    const messagesKey = toTopicMessagesKey(this.topic);
 
     await this.redisClient.multi()
       .rPush(messagesKey, serializedMessage)
-      .expire(messagesKey, MAX_SUBSCRIBER_TTL_SECONDS)
+      .lTrim(messagesKey, -MAX_TOPIC_MESSAGES_LENGTH, -1)
+      .expire(messagesKey, TOPIC_MESSAGES_TTL_SECONDS)
       .exec();
   }
 
+  // In multi-instance mode we keep *one* Kafka consumer per topic (per cluster) and store messages once.
+  // Each subscriber only records metadata (id/topic/subscription time) and reads from the topic list.
+  async subscribe(timestamp?: number): Promise<void> {
+    await ensureTopicConsumerRunning(
+      { brokers: this.kafkaConfig.brokers, topic: this.topic },
+      {
+        connectionTimeout: this.kafkaConfig.connectionTimeout,
+        sasl: this.kafkaConfig.sasl,
+        ssl: this.kafkaConfig.ssl,
+      },
+      timestamp,
+    );
+  }
+
   async getMessages(subscriberId: string = this.id): Promise<ConsumedMessage[]> {
-    return await getMessagesFromRedis(subscriberId);
+    void subscriberId;
+    return await getMessagesFromRedis(this.topic, this.timeOfSubscription);
   }
 }
 

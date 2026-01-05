@@ -5,7 +5,7 @@ import { getRedisClient } from '../../redis/redis-client';
 import { ConsumedMessage } from '../../types';
 import { decode } from '../schema-registry';
 
-import { toMessagesKey } from './redis-keys';
+import { toTopicMessagesKey } from './redis-keys';
 
 export const fromKafkaToConsumedMessage = async (message: KafkaMessage): Promise<ConsumedMessage> => {
   const decodedValue = await decode(message.value as Buffer);
@@ -27,8 +27,8 @@ export const fromKafkaToConsumedMessage = async (message: KafkaMessage): Promise
   };
 };
 
-export const getMessagesFromRedis = async (subscriberId: string): Promise<ConsumedMessage[]> => {
-  const serializedMessages = await getRedisClient().lRange(toMessagesKey(subscriberId), 0, -1);
+export const getMessagesFromRedis = async (topic: string, sinceTimestampMs?: number): Promise<ConsumedMessage[]> => {
+  const serializedMessages = await getRedisClient().lRange(toTopicMessagesKey(topic), 0, -1);
   const messages = serializedMessages.map(
     (serializedMessageObject: string) => {
       const message = JSON.parse(serializedMessageObject) as ConsumedMessage;
@@ -38,5 +38,13 @@ export const getMessagesFromRedis = async (subscriberId: string): Promise<Consum
       return message;
     },
   );
-  return messages;
+
+  if (!sinceTimestampMs) {
+    return messages;
+  }
+
+  return messages.filter((message) => {
+    const timestamp = Number(message.timestamp);
+    return Number.isFinite(timestamp) ? timestamp >= sinceTimestampMs : true;
+  });
 };

@@ -1,4 +1,7 @@
-import { takeOverSubscribers } from '../kafka/subscribers';
+import {
+  releaseAllTopicLeadership,
+  warmUpTopicsFromInstance,
+} from '../kafka/subscribers';
 import log from '../log';
 import {
   getRedisClient,
@@ -20,7 +23,11 @@ const handleShutdownAnnouncement = async <T extends string>(message: T) => {
   const { from, to } = JSON.parse(message) as { from: string; to: string };
   if (to === thisRelayInstanceId) {
     log.info({ from, to }, 'Received shutdown announcement');
-    await takeOverSubscribers(from);
+    try {
+      await warmUpTopicsFromInstance(from);
+    } catch (error) {
+      log.warn({ error, from, to }, 'Failed warming up topics from shutdown announcement (best-effort)');
+    }
   }
 };
 
@@ -31,6 +38,11 @@ export const registerInstance = async (): Promise<void> => {
 
 export const onShutdown = async (): Promise<void> => {
   log.info('Starting shutdown process');
+  try {
+    await releaseAllTopicLeadership();
+  } catch (error) {
+    log.warn({ error }, 'Failed releasing topic leadership on shutdown (best-effort)');
+  }
   await unregisterInstance();
   await announceShutdown();
   await cleanupOnShutdown();

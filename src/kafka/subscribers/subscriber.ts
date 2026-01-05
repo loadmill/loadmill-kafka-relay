@@ -28,6 +28,7 @@ export class Subscriber {
     { brokers, topic }: SubscribeParams,
     { connectionTimeout, sasl, ssl = false }: SubscribeOptions,
     id?: string,
+    groupIdOverride?: string,
   ) {
     this.timeOfSubscription = Date.now();
     this.topic = topic;
@@ -43,7 +44,8 @@ export class Subscriber {
       },
     });
     this.id = id || randomUUID();
-    this.consumer = this.kafka.consumer({ kafkaJS: { fromBeginning: false, groupId: this.id } });
+    const groupId = groupIdOverride || this.id;
+    this.consumer = this.kafka.consumer({ kafkaJS: { fromBeginning: false, groupId } });
   }
 
   async addMessage({ message }: EachMessagePayload): Promise<void> {
