@@ -1,5 +1,5 @@
 import log from '../../log';
-import { thisRelayInstanceId } from '../../multi-instance';
+import { thisRelayInstanceId } from '../../multi-instance/relay-instance-id';
 import {
   getRedisClient,
   getRedisSubscriberClient,
@@ -7,6 +7,7 @@ import {
 import { RedisClient } from '../../redis/types';
 import {
   ConsumedMessage,
+  ConsumeQueryOptions,
   SubscribeOptions,
   SubscribeParams,
 } from '../../types';
@@ -15,9 +16,9 @@ import {
   MAX_SUBSCRIBER_TTL_SECONDS,
   SUBSCRIBER_EXPIRY_CHECK_INTERVAL_MS,
 } from './constants';
-import { getMessagesFromRedis } from './messages';
 import { DELETE_SUBSCRIBER_CHANNEL } from './redis-channels';
 import { toSubscriberKey } from './redis-keys';
+import { getMessagesFromRedis } from './redis-messages';
 import { RedisSubscriber, RedisSubscribers } from './redis-subscriber';
 import { SerializedRedisSubscriber } from './serialized-subscriber';
 import { SubscribersManager } from './subscribers-manager';
@@ -173,7 +174,10 @@ export class RedisSubscribersManager extends SubscribersManager {
     return allActiveSubscribers.includes(id);
   };
 
-  getMessages = async (subscriberId: string): Promise<ConsumedMessage[]> => {
+  getMessages = async (
+    subscriberId: string,
+    options?: ConsumeQueryOptions,
+  ): Promise<ConsumedMessage[]> => {
     const localSubscriber = this.subscribers[subscriberId];
     if (localSubscriber) {
       await ensureTopicConsumerRunning(
@@ -184,7 +188,7 @@ export class RedisSubscribersManager extends SubscribersManager {
           ssl: localSubscriber.kafkaConfig.ssl,
         },
       );
-      return await getMessagesFromRedis(localSubscriber.topic);
+      return await getMessagesFromRedis(localSubscriber.topic, options);
     }
 
     const redisSubscriber = await this.getSubscriberFromRedis(subscriberId);
@@ -198,7 +202,7 @@ export class RedisSubscribersManager extends SubscribersManager {
       { brokers, topic },
       { connectionTimeout, sasl, ssl },
     );
-    return await getMessagesFromRedis(topic);
+    return await getMessagesFromRedis(topic, options);
   };
 
   private getSubscriberFromRedis = async (subscriberId: string): Promise<SerializedRedisSubscriber | undefined> => {

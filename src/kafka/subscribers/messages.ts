@@ -1,4 +1,3 @@
-
 import { KafkaMessage } from '@confluentinc/kafka-javascript/types/kafkajs';
 
 import { getRedisClient } from '../../redis/redis-client';

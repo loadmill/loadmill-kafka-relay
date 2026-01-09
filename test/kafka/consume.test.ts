@@ -1,10 +1,12 @@
-import { filterMessages } from '../../src/kafka/consume';
+import { filterMessages } from '../../src/kafka/consume/consume-query';
 import { subscriptionsManager } from '../../src/kafka/subscribers/subscribers-manager-factory';
 import { ConsumedMessage } from '../../src/types';
 
 describe('filterMessages', () => {
   const headerRegexFilter = 'header-filter-1';
   const regexFilter = 'regex-filter';
+  const headerRegex = new RegExp(headerRegexFilter);
+  const valueRegex = new RegExp(regexFilter);
   it('should filter a message by a header', async () => {
     const message1 = {
       headers: {
@@ -24,7 +26,10 @@ describe('filterMessages', () => {
     } as ConsumedMessage;
 
     const consumedMessages = [message1, message2];
-    const res = filterMessages(consumedMessages, headerRegexFilter, regexFilter);
+    const res = filterMessages(consumedMessages, {
+      headerRegex,
+      valueRegex,
+    });
     expect(res).toEqual([message2]);
   });
 
@@ -47,13 +52,17 @@ describe('filterMessages', () => {
     } as ConsumedMessage;
 
     const consumedMessages = [message1, message2];
-    const res = filterMessages(consumedMessages, headerRegexFilter, regexFilter);
+    const res = filterMessages(consumedMessages, {
+      headerRegex,
+      valueRegex,
+    });
     expect(res).toEqual([message2]);
     expect(res.length).toEqual(1);
   });
 
   it('should filter a message by a value only', async () => {
     const regexFilter2 = 'request-id-2';
+    const valueRegex2 = new RegExp(regexFilter2);
     const message1 = {
       headers: {
         'key1': 'value1',
@@ -72,7 +81,10 @@ describe('filterMessages', () => {
     } as ConsumedMessage;
 
     const consumedMessages = [message1, message2];
-    const res = filterMessages(consumedMessages, headerRegexFilter, regexFilter2);
+    const res = filterMessages(consumedMessages, {
+      headerRegex,
+      valueRegex: valueRegex2,
+    });
     expect(res).toEqual([message1]);
   });
 
@@ -95,7 +107,10 @@ describe('filterMessages', () => {
     } as ConsumedMessage;
 
     const consumedMessages = [message1, message2];
-    const res = filterMessages(consumedMessages, headerRegexFilter, regexFilter);
+    const res = filterMessages(consumedMessages, {
+      headerRegex,
+      valueRegex,
+    });
     expect(res).toEqual([message1, message2]);
   });
 
