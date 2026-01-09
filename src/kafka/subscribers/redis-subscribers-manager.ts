@@ -1,5 +1,5 @@
 import log from '../../log';
-import { thisRelayInstanceId } from '../../multi-instance';
+import { thisRelayInstanceId } from '../../multi-instance/relay-instance-id';
 import {
   getRedisClient,
   getRedisSubscriberClient,
@@ -7,6 +7,7 @@ import {
 import { RedisClient } from '../../redis/types';
 import {
   ConsumedMessage,
+  ConsumeQueryOptions,
   SubscribeOptions,
   SubscribeParams,
 } from '../../types';
@@ -15,9 +16,9 @@ import {
   MAX_SUBSCRIBER_TTL_SECONDS,
   SUBSCRIBER_EXPIRY_CHECK_INTERVAL_MS,
 } from './constants';
-import { getMessagesFromRedis } from './messages';
 import { DELETE_SUBSCRIBER_CHANNEL } from './redis-channels';
 import { toMessagesKey, toSubscriberKey } from './redis-keys';
+import { getMessagesFromRedis } from './redis-messages';
 import { RedisSubscriber, RedisSubscribers } from './redis-subscriber';
 import { SerializedRedisSubscriber } from './serialized-subscriber';
 import { SubscribersManager } from './subscribers-manager';
@@ -169,8 +170,11 @@ export class RedisSubscribersManager extends SubscribersManager {
     return allActiveSubscribers.includes(id);
   };
 
-  getMessages = async (subscriberId: string): Promise<ConsumedMessage[]> => {
-    return await getMessagesFromRedis(subscriberId);
+  getMessages = async (
+    subscriberId: string,
+    options?: ConsumeQueryOptions,
+  ): Promise<ConsumedMessage[]> => {
+    return await getMessagesFromRedis(subscriberId, options);
   };
 
   getActiveSubscribers = async (): Promise<RedisSubscribers> => {

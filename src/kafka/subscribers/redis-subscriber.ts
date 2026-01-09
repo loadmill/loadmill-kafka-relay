@@ -1,7 +1,7 @@
 
 import { EachMessagePayload } from '@confluentinc/kafka-javascript/types/kafkajs';
 
-import { thisRelayInstanceId } from '../../multi-instance';
+import { thisRelayInstanceId } from '../../multi-instance/relay-instance-id';
 import { getRedisClient } from '../../redis/redis-client';
 import { RedisClient } from '../../redis/types';
 import { ConsumedMessage, SubscribeOptions, SubscribeParams } from '../../types';
@@ -9,9 +9,9 @@ import { ConsumedMessage, SubscribeOptions, SubscribeParams } from '../../types'
 import { MAX_SUBSCRIBER_TTL_SECONDS } from './constants';
 import {
   fromKafkaToConsumedMessage,
-  getMessagesFromRedis,
 } from './messages';
 import { toMessagesKey } from './redis-keys';
+import { getMessagesFromRedis } from './redis-messages';
 import { ShallowSubscriber, Subscriber } from './subscriber';
 
 export class RedisSubscriber extends Subscriber {

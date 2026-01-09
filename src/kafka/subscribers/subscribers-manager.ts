@@ -1,6 +1,10 @@
-
 import log from '../../log';
-import { ConsumedMessage, SubscribeOptions, SubscribeParams } from '../../types';
+import {
+  ConsumedMessage,
+  ConsumeQueryOptions,
+  SubscribeOptions,
+  SubscribeParams,
+} from '../../types';
 
 import {
   MAX_SUBSCRIBER_EXPIRY_TIME_MS,
@@ -47,7 +51,11 @@ export class SubscribersManager {
     return !!this.subscribers[id];
   };
 
-  getMessages = (subscriberId: string): ConsumedMessage[] | Promise<ConsumedMessage[]> => {
+  getMessages = (
+    subscriberId: string,
+    options?: ConsumeQueryOptions,
+  ): ConsumedMessage[] | Promise<ConsumedMessage[]> => {
+    void options;
     const subscriber = this.get(subscriberId);
     if (subscriber) {
       return subscriber.getMessages();

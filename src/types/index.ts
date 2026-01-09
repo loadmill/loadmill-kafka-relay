@@ -92,3 +92,12 @@ export type EncodeProduceOptions = {
   headers?: EncodeHeaderOptions;
   value?: EncodeSchemaOptions;
 };
+
+export type FilterRegexOptions = {
+  headerRegex?: RegExp | null;
+  valueRegex?: RegExp | null;
+};
+
+export type ConsumeQueryOptions = Pick<ConsumeOptions, 'multiple'> & FilterRegexOptions;
+
+export type MessageOrTimeoutOptions = Pick<ConsumeOptions, 'timeout'> & ConsumeQueryOptions;

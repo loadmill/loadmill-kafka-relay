@@ -1,5 +1,5 @@
-import { thisRelayInstanceId } from '../../multi-instance';
 import { kafkaRelayPrefixKey } from '../../multi-instance/redis-keys';
+import { thisRelayInstanceId } from '../../multi-instance/relay-instance-id';
 
 export const toSubscriberKey = (
   subscriberId: string,
