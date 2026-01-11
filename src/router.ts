@@ -1,6 +1,10 @@
 import Fastify from 'fastify';
 
 import { APP_NAME } from './constants';
+import {
+  incrementConsumeCalls,
+  incrementSubscribeCalls,
+} from './diagnostics/endpoint-counters';
 import { ClientError } from './errors';
 import { injectEnvVars } from './inject-env';
 import { getConnectionTimeout } from './kafka/connection-timeout';
@@ -45,6 +49,7 @@ app.post('/subscribe', {
   preValidation: injectEnvVars,
   schema: subscribeValidationSchema,
 }, async (request) => {
+  incrementSubscribeCalls();
   const { brokers, connectionTimeout, topic, sasl, ssl, timestamp } = request.body as SubscribeParams & SubscribeOptions;
   const { id } = await subscribe(
     { brokers, topic },
@@ -71,7 +76,10 @@ app.delete('/subscriptions/:id', async (request) => {
   return { id };
 });
 
-app.get('/consume/:id', { schema: consumeValidationSchema }, async (request) => {
+app.get('/consume/:id', {
+  schema: consumeValidationSchema,
+}, async (request) => {
+  incrementConsumeCalls();
   const { id } = request.params as { id: string };
 
   const { headerFilter: headerValueRegexFilter, filter: regexFilter, multiple, text, timeout } = request.query as {

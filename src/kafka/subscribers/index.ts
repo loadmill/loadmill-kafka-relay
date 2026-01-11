@@ -9,3 +9,4 @@ export const isSubscriberExists = subscriptionsManager.isSubscriberExists;
 export const getMessages = subscriptionsManager.getMessages;
 
 export const takeOverSubscribers = (subscriptionsManager as RedisSubscribersManager).takeOverSubscribers;
+export const getLocalSubscribers = (subscriptionsManager as RedisSubscribersManager).getLocalSubscribers;
