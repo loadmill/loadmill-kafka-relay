@@ -173,6 +173,10 @@ export class RedisSubscribersManager extends SubscribersManager {
     return await getMessagesFromRedis(subscriberId);
   };
 
+  getLocalSubscribers = (): RedisSubscribers => {
+    return this.subscribers;
+  };
+
   getActiveSubscribers = async (): Promise<RedisSubscribers> => {
     const localSubscribers = this.subscribers;
     const nonLocalSubscriberIds = await this.getNonLocalSubscriberIds(localSubscribers);

@@ -535,7 +535,26 @@ By default, logs are written the `info` level. You can customize the logging beh
 NODE_ENV=development # Setting this will enable debug logs to console only
 
 LOG_LEVEL= # The level of logging. Can be one of the following: "fatal" | "error" | "warn" | "info" | "debug" | "trace". Defaults to info.
+
+MULTI_INSTANCE_DIAGNOSTICS_LOGGING=true # Enable periodic diagnostics logging for multi-instance mode. Defaults to false.
 ```
+
+### Troubleshooting crashes (Kubernetes)
+
+If `loadmill-kafka-relay` crashes or restarts in Kubernetes, logs from the crashed instance are still available.
+
+Run:
+
+```bash
+kubectl logs deployment/loadmill-kafka-relay --previous --since=2h > loadmill-relay-crash.log
+```
+
+Then send the file `loadmill-relay-crash.log` to Loadmill support.
+
+Notes:
+- This command works only for the most recent crash
+- If the pod crashes again, older logs are overwritten
+- Only stdout/stderr logs are retained (file logs inside the container are not)
 
 ## Multi Instance
 
