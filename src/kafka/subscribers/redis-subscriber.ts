@@ -6,7 +6,7 @@ import { getRedisClient } from '../../redis/redis-client';
 import { RedisClient } from '../../redis/types';
 import { ConsumedMessage, SubscribeOptions, SubscribeParams } from '../../types';
 
-import { MAX_SUBSCRIBER_TTL_SECONDS } from './constants';
+import { MAX_REDIS_SUBSCRIBER_MESSAGES, MAX_SUBSCRIBER_TTL_SECONDS } from './constants';
 import {
   fromKafkaToConsumedMessage,
   getMessagesFromRedis,
@@ -47,6 +47,8 @@ export class RedisSubscriber extends Subscriber {
 
     await this.redisClient.multi()
       .rPush(messagesKey, serializedMessage)
+      // Bound per-subscriber list size within the TTL window.
+      .lTrim(messagesKey, -MAX_REDIS_SUBSCRIBER_MESSAGES, -1)
       .expire(messagesKey, MAX_SUBSCRIBER_TTL_SECONDS)
       .exec();
   }

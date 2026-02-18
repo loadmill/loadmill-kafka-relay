@@ -30,6 +30,10 @@ export const MAX_SUBSCRIBER_MESSAGES = clampNumber(
   MAX_MAX_SUBSCRIBER_MESSAGES,
 );
 
+// Keep Redis-backed retention consistent with single-instance mode.
+// Used for list trimming on every message append.
+export const MAX_REDIS_SUBSCRIBER_MESSAGES = MAX_SUBSCRIBER_MESSAGES;
+
 export const MAX_SUBSCRIBER_BYTES = clampNumber(
   parseEnvNumber(process.env.MAX_SUBSCRIBER_BYTES, DEFAULT_MAX_SUBSCRIBER_BYTES),
   MIN_MAX_SUBSCRIBER_BYTES,
