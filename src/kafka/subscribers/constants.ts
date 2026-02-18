@@ -17,7 +17,9 @@ const clampNumber = (value: number, min: number, max: number): number => {
 };
 
 const parseEnvNumber = (raw: string | undefined, fallback: number): number => {
-  if (!raw) return fallback;
+  if (!raw) {
+    return fallback;
+  }
   const n = Number(raw);
   return Number.isFinite(n) ? n : fallback;
 };

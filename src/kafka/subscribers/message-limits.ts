@@ -3,13 +3,13 @@ import clamp from 'lodash/clamp';
 import { ConsumedMessage } from '../../types';
 
 export type MessageLimitOptions = {
-  maxMessages: number;
   maxBytes: number;
+  maxMessages: number;
 };
 
 export type EvictionMetadata = {
-  droppedCount: number;
   droppedBytes: number;
+  droppedCount: number;
 };
 
 /**
@@ -41,7 +41,9 @@ export const estimateConsumedMessageBytes = (message: ConsumedMessage): number =
   if (headers) {
     for (const [k, v] of Object.entries(headers)) {
       bytes += k.length;
-      if (v) bytes += v.length;
+      if (v) {
+        bytes += v.length;
+      }
     }
   }
 
@@ -85,7 +87,9 @@ export const enforceMessageLimits = (
 
   while (messages.length > maxMessages || totalBytes > maxBytes) {
     const dropped = messages.shift();
-    if (!dropped) break;
+    if (!dropped) {
+      break;
+    }
     const size = estimateConsumedMessageBytes(dropped);
     totalBytes -= size;
     droppedCount += 1;
