@@ -5,6 +5,7 @@ import { getRedisClient } from '../../redis/redis-client';
 import { ConsumedMessage } from '../../types';
 import { decode } from '../schema-registry';
 
+import { MAX_REDIS_SUBSCRIBER_MESSAGES } from './constants';
 import { toMessagesKey } from './redis-keys';
 
 export const fromKafkaToConsumedMessage = async (message: KafkaMessage): Promise<ConsumedMessage> => {
@@ -28,7 +29,12 @@ export const fromKafkaToConsumedMessage = async (message: KafkaMessage): Promise
 };
 
 export const getMessagesFromRedis = async (subscriberId: string): Promise<ConsumedMessage[]> => {
-  const serializedMessages = await getRedisClient().lRange(toMessagesKey(subscriberId), 0, -1);
+  // Always read a bounded tail window to avoid unbounded heap growth.
+  const serializedMessages = await getRedisClient().lRange(
+    toMessagesKey(subscriberId),
+    -MAX_REDIS_SUBSCRIBER_MESSAGES,
+    -1,
+  );
   const messages = serializedMessages.map(
     (serializedMessageObject: string) => {
       const message = JSON.parse(serializedMessageObject) as ConsumedMessage;
