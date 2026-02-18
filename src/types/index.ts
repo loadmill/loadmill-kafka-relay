@@ -55,6 +55,8 @@ export type ConsumeParams = {
 
 export type ConsumeOptions = {
   headerValueRegexFilter?: string;
+  /** Hard cap on number of messages returned */
+  limit?: number;
   multiple?: number;
   regexFilter?: string;
   text?: string; // 'true', 'false', 'TRUE', 'FALSE', 'True', 'False', '1', '0'

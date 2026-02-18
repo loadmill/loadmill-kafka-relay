@@ -37,6 +37,9 @@ import {
   SubscribeParams,
 } from './types';
 
+const DEFAULT_CONSUME_LIMIT = 100;
+const MAX_CONSUME_LIMIT = 1000;
+
 const app = Fastify({
   logger: pinoLogger,
 });
@@ -82,11 +85,17 @@ app.get('/consume/:id', {
   incrementConsumeCalls();
   const { id } = request.params as { id: string };
 
-  const { headerFilter: headerValueRegexFilter, filter: regexFilter, multiple, text, timeout } = request.query as {
-    filter?: string; headerFilter?: string; multiple?: number; text?: string; timeout?: number;
+  const { headerFilter: headerValueRegexFilter, filter: regexFilter, limit, multiple, text, timeout } = request.query as {
+    filter?: string; headerFilter?: string; limit?: string; multiple?: number; text?: string; timeout?: number;
   };
+
+  const resolvedLimit = Math.min(
+    Math.max(limit ? Number(limit) : DEFAULT_CONSUME_LIMIT, 1),
+    MAX_CONSUME_LIMIT,
+  );
   const consumeOptions = {
     headerValueRegexFilter,
+    limit: resolvedLimit,
     multiple,
     regexFilter,
     text,

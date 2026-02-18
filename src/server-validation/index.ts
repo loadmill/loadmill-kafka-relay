@@ -134,6 +134,11 @@ export const consumeValidationSchema: FastifySchema = {
     properties: {
       filter: { type: 'string', format: 'regex' },
       headerFilter: { type: 'string', format: 'regex' },
+      limit: {
+        type: 'string',
+        format: 'int32',
+        pattern: '^(?:[1-9][0-9]{0,2}|1000)$', // min 1, max 1000
+      },
       multiple: {
         type: 'string',
         format: 'int32',
@@ -151,6 +156,7 @@ export const consumeValidationSchema: FastifySchema = {
     },
     errorMessage: {
       properties: {
+        limit: 'Should be an integer between 1 and 1000',
         multiple: 'Should be an integer between 1 and 100',
         text: 'Should be a boolean (true/false)',
         timeout: 'Should be an integer between 5 and 25',
