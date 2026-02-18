@@ -13,12 +13,13 @@ const WAIT_INTERVAL_MS = 2 * SECOND_MS;
 
 export const consume = async (
   { id }: ConsumeParams,
-  { headerValueRegexFilter, multiple, regexFilter, text, timeout }: ConsumeOptions,
+  { headerValueRegexFilter, limit = 100, multiple, regexFilter, text, timeout }: ConsumeOptions,
 ): Promise<ConsumedMessage[]> => {
   const res = await getMessagesOrTimeout(
     () => getMessages(id),
     {
       headerValueRegexFilter,
+      limit,
       multiple,
       regexFilter,
       timeout,
@@ -38,6 +39,7 @@ const getMessagesOrTimeout = async (
   getMessages: () => Promise<ConsumedMessage[]> | ConsumedMessage[],
   {
     headerValueRegexFilter,
+    limit,
     multiple,
     regexFilter,
     timeout,
@@ -50,7 +52,7 @@ const getMessagesOrTimeout = async (
 
   while (!res && elapsedTime < timeoutMs) {
     const messages = await getMessages();
-    res = findMessageByRegex(messages, headerValueRegexFilter, regexFilter, multiple);
+    res = findLatestMessages(messages, { headerValueRegexFilter, limit, multiple, regexFilter });
     if (res) {
       break;
     }
@@ -61,13 +63,48 @@ const getMessagesOrTimeout = async (
   return res;
 };
 
-type MessageOrTimeoutOptions = Pick<ConsumeOptions, 'headerValueRegexFilter' | 'multiple' | 'regexFilter' | 'timeout'>;
+type MessageOrTimeoutOptions = Required<Pick<ConsumeOptions, 'limit'>> & Pick<ConsumeOptions, 'headerValueRegexFilter' | 'multiple' | 'regexFilter' | 'timeout'>;
 
-const findMessageByRegex = (messages: ConsumedMessage[], headerValueRegexFilter?:string, regexFilter?: string, multiple?: number): ConsumedMessage[] | undefined => {
-  if (regexFilter || headerValueRegexFilter) {
-    messages = filterMessages(messages, headerValueRegexFilter, regexFilter);
+type FindLatestMessagesOptions = Required<Pick<ConsumeOptions, 'limit'>> & Pick<ConsumeOptions, 'headerValueRegexFilter' | 'multiple' | 'regexFilter'>;
+
+const findLatestMessages = (
+  messages: ConsumedMessage[],
+  {
+    headerValueRegexFilter,
+    limit,
+    multiple,
+    regexFilter,
+  }: FindLatestMessagesOptions,
+): ConsumedMessage[] | undefined => {
+  const takeCount = Math.min(Math.max(multiple ?? 1, 1), limit);
+
+  if (!regexFilter && !headerValueRegexFilter) {
+    return getLatestNMessages(messages, takeCount);
   }
-  return getLatestNMessages(messages, multiple);
+
+  const valueRegex = regexFilter ? new RegExp(regexFilter) : null;
+  const headerRegex = headerValueRegexFilter ? new RegExp(headerValueRegexFilter) : null;
+
+  const matched: ConsumedMessage[] = [];
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const message = messages[i];
+    const valueAsString = String(message.value || '');
+    const valueMatch = valueRegex?.test(valueAsString);
+    const headerMatch = headerRegex ? hasMatchingHeader(message.headers, headerRegex) : false;
+
+    if (valueMatch || headerMatch) {
+      matched.push(message);
+      if (matched.length >= takeCount) {
+        break;
+      }
+    }
+  }
+
+  if (matched.length === 0) {
+    return undefined;
+  }
+
+  return matched.reverse();
 };
 
 export const filterMessages = (
@@ -75,7 +112,7 @@ export const filterMessages = (
   headerValueRegexFilter?: string,
   regexFilter?: string,
 ): ConsumedMessage[] => {
-  log.debug({ messages, regexFilter }, 'Filtering messages by regex');
+  log.debug({ messagesCount: messages.length, regexFilter }, 'Filtering messages by regex');
 
   const valueRegex = regexFilter ? new RegExp(regexFilter) : null;
   const headerRegex = headerValueRegexFilter ? new RegExp(headerValueRegexFilter) : null;
