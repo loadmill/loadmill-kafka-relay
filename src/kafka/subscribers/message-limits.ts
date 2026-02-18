@@ -60,7 +60,7 @@ export const clampMessageLimit = (value: number, min: number, max: number): numb
 
 export const enforceMessageLimits = (
   messages: ConsumedMessage[],
-  { maxMessages, maxBytes }: MessageLimitOptions,
+  { maxBytes, maxMessages }: MessageLimitOptions,
 ): EvictionMetadata => {
   // Fast path
   if (messages.length === 0) {

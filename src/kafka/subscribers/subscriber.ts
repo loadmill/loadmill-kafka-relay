@@ -13,6 +13,8 @@ import { ConsumedMessage, SubscribeOptions, SubscribeParams } from '../../types'
 import { Kafka, KafkaType } from '../../types/kafkajs-confluent';
 import { prepareBrokers } from '../brokers';
 
+import { MAX_SUBSCRIBER_BYTES, MAX_SUBSCRIBER_MESSAGES } from './constants';
+import { enforceMessageLimits } from './message-limits';
 import { fromKafkaToConsumedMessage } from './messages';
 
 export class Subscriber {
@@ -47,7 +49,27 @@ export class Subscriber {
   }
 
   async addMessage({ message }: EachMessagePayload): Promise<void> {
-    this.messages.push(await fromKafkaToConsumedMessage(message));
+    const consumedMessage = await fromKafkaToConsumedMessage(message);
+    this.messages.push(consumedMessage);
+
+    const { droppedBytes, droppedCount } = enforceMessageLimits(this.messages, {
+      maxBytes: MAX_SUBSCRIBER_BYTES,
+      maxMessages: MAX_SUBSCRIBER_MESSAGES,
+    });
+
+    if (droppedCount > 0) {
+      log.debug(
+        {
+          droppedBytes,
+          droppedCount,
+          maxBytes: MAX_SUBSCRIBER_BYTES,
+          maxMessages: MAX_SUBSCRIBER_MESSAGES,
+          subscriberId: this.id,
+          topic: this.topic,
+        },
+        'Subscriber message retention caps exceeded; dropped oldest messages',
+      );
+    }
   }
 
   async getMessages(): Promise<ConsumedMessage[]> {
