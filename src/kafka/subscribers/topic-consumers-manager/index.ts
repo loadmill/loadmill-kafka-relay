@@ -28,19 +28,6 @@ type TopicEntry = {
 
 const topics = new Map<string, TopicEntry>();
 
-export const releaseAllTopicLeadership = async (): Promise<void> => {
-  const redisClient = getRedisClient();
-  await Promise.all(
-    Array.from(topics.keys()).map(async (topic) => {
-      try {
-        await stopTopicConsumer(topic, redisClient, 'graceful shutdown');
-      } catch (error) {
-        log.debug({ error, topic }, 'Failed releasing topic leadership (best-effort)');
-      }
-    }),
-  );
-};
-
 export const ensureTopicConsumerRunning = async (
   { brokers, topic }: SubscribeParams,
   { connectionTimeout, sasl, ssl }: SubscribeOptions,
