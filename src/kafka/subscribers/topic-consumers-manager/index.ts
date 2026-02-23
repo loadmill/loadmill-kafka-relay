@@ -72,8 +72,11 @@ export const ensureTopicConsumerRunning = async (
 
       if (!entry.renewIntervalId) {
         entry.renewIntervalId = setInterval(() => {
-          void renewLeadershipOrStop(topic);
+          renewLeadershipOrStop(topic).catch((error) =>
+            log.warn({ error, topic }, 'Leadership renew failed'),
+          );
         }, TOPIC_LEADER_LOCK_RENEW_INTERVAL_MS);
+        entry.renewIntervalId.unref();
       }
 
       if (entry.consumer) {
