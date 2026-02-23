@@ -67,8 +67,7 @@ export class RedisSubscriber extends Subscriber {
     );
   }
 
-  async getMessages(subscriberId: string = this.id): Promise<ConsumedMessage[]> {
-    void subscriberId;
+  async getMessages(): Promise<ConsumedMessage[]> {
     return await getMessagesFromRedis(this.topic);
   }
 }
