@@ -9,3 +9,11 @@ export const toSubscriberKey = (
 
 export const toMessagesKey = (subscriberId: string): string =>
   `${kafkaRelayPrefixKey}:subscribers:${subscriberId}:messages`;
+
+const encodeKeyPart = (value: string): string => encodeURIComponent(value);
+
+export const toTopicMessagesKey = (topic: string): string =>
+  `${kafkaRelayPrefixKey}:topics:${encodeKeyPart(topic)}:messages`;
+
+export const toTopicLeaderKey = (topic: string): string =>
+  `${kafkaRelayPrefixKey}:topics:${encodeKeyPart(topic)}:leader`;

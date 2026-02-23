@@ -17,10 +17,11 @@ import {
 } from './constants';
 import { getMessagesFromRedis } from './messages';
 import { DELETE_SUBSCRIBER_CHANNEL } from './redis-channels';
-import { toMessagesKey, toSubscriberKey } from './redis-keys';
+import { toSubscriberKey } from './redis-keys';
 import { RedisSubscriber, RedisSubscribers } from './redis-subscriber';
 import { SerializedRedisSubscriber } from './serialized-subscriber';
 import { SubscribersManager } from './subscribers-manager';
+import { ensureTopicConsumerRunning } from './topic-consumers-manager';
 
 /**
  * Manages Kafka subscribers using Redis as a data store.
@@ -51,7 +52,6 @@ export class RedisSubscribersManager extends SubscribersManager {
         const { timeOfSubscription } = subscriber;
         log.info({ id, timeOfSubscription, topic: subscriber.topic }, 'Unsubscribing expired subscriber');
         await this.deleteInMemorySubscriber(id);
-        await this.deleteMessagesFromRedis(id);
       }
     }));
   };
@@ -77,7 +77,11 @@ export class RedisSubscribersManager extends SubscribersManager {
     const subscriber = this.subscribers[id];
     if (subscriber) {
       const { consumer } = subscriber;
-      await consumer.disconnect();
+      try {
+        await consumer.disconnect();
+      } catch (error) {
+        log.debug({ error, id }, 'Ignoring consumer disconnect error');
+      }
       delete this.subscribers[id];
     }
   }
@@ -98,7 +102,6 @@ export class RedisSubscribersManager extends SubscribersManager {
   private async deleteSubscriber(id: string): Promise<void> {
     await this.deleteInMemorySubscriber(id);
     await this.deleteSubscriberFromRedis(id);
-    await this.deleteMessagesFromRedis(id);
   }
 
   private deleteSubscriberFromRedis = async (
@@ -109,10 +112,6 @@ export class RedisSubscribersManager extends SubscribersManager {
     await this.redisClient.multi()
       .del(toSubscriberKey(subscriberId, relayInstanceId))
       .exec();
-  };
-
-  private deleteMessagesFromRedis = async (subscriberId: string): Promise<void> => {
-    await this.redisClient.del(toMessagesKey(subscriberId));
   };
 
   add = async (
@@ -170,7 +169,47 @@ export class RedisSubscribersManager extends SubscribersManager {
   };
 
   getMessages = async (subscriberId: string): Promise<ConsumedMessage[]> => {
-    return await getMessagesFromRedis(subscriberId);
+    const localSubscriber = this.subscribers[subscriberId];
+    if (localSubscriber) {
+      await ensureTopicConsumerRunning(
+        { brokers: localSubscriber.kafkaConfig.brokers, topic: localSubscriber.topic },
+        {
+          connectionTimeout: localSubscriber.kafkaConfig.connectionTimeout,
+          sasl: localSubscriber.kafkaConfig.sasl,
+          ssl: localSubscriber.kafkaConfig.ssl,
+        },
+        undefined,
+      );
+      return await getMessagesFromRedis(localSubscriber.topic);
+    }
+
+    const redisSubscriber = await this.getSubscriberFromRedis(subscriberId);
+    if (!redisSubscriber) {
+      return [];
+    }
+
+    const { kafkaConfig, topic } = redisSubscriber;
+    const { brokers, connectionTimeout, sasl, ssl } = kafkaConfig;
+    await ensureTopicConsumerRunning(
+      { brokers, topic },
+      { connectionTimeout, sasl, ssl },
+      undefined,
+    );
+
+    return await getMessagesFromRedis(topic);
+  };
+
+  private getSubscriberFromRedis = async (subscriberId: string): Promise<SerializedRedisSubscriber | undefined> => {
+    const keys = await this.redisClient.keys(toSubscriberKey(subscriberId, '*'));
+    if (keys.length === 0) {
+      return;
+    }
+    const instanceId = keys[0].split(':')[1];
+    const serialized = await this.redisClient.get(toSubscriberKey(subscriberId, instanceId));
+    if (!serialized) {
+      return;
+    }
+    return JSON.parse(serialized) as SerializedRedisSubscriber;
   };
 
   getLocalSubscribers = (): RedisSubscribers => {
