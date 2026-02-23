@@ -33,7 +33,9 @@ export class SubscribersManager {
     const subscriber = this.subscribers[id];
     if (subscriber) {
       const { consumer } = subscriber;
-      await consumer.disconnect();
+      if (consumer) {
+        await consumer.disconnect();
+      }
       delete this.subscribers[id];
       return id;
     }
@@ -72,7 +74,9 @@ export class SubscribersManager {
         const { timeOfSubscription, consumer } = subscriber;
         if (this.shouldUnsubscribe(timeOfSubscription)) {
           log.info({ id, timeOfSubscription, topic: subscriber.topic }, 'Unsubscribing expired subscriber');
-          await consumer.disconnect();
+          if (consumer) {
+            await consumer.disconnect();
+          }
           delete this.subscribers[id];
         }
       }));

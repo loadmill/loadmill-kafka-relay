@@ -78,7 +78,9 @@ export class RedisSubscribersManager extends SubscribersManager {
     if (subscriber) {
       const { consumer } = subscriber;
       try {
-        await consumer.disconnect();
+        if (consumer) {
+          await consumer.disconnect();
+        }
       } catch (error) {
         log.debug({ error, id }, 'Ignoring consumer disconnect error');
       }

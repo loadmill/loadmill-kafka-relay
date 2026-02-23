@@ -25,7 +25,8 @@ export class RedisSubscriber extends Subscriber {
     takeOverParams?: TakeOverParams,
     debugParams?: { instanceId: string },
   ) {
-    super(subscribeParams, subscribeOptions, takeOverParams?.id);
+    // In per-topic consumer mode, RedisSubscriber is metadata-only: no Kafka consumer/client needed.
+    super(subscribeParams, subscribeOptions, takeOverParams?.id, undefined, false);
     takeOverParams && (this.timeOfSubscription = takeOverParams.timeOfSubscription);
     debugParams && (this.instanceId = debugParams.instanceId);
   }

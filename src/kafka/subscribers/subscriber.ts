@@ -16,9 +16,9 @@ import { prepareBrokers } from '../brokers';
 import { fromKafkaToConsumedMessage } from './messages';
 
 export class Subscriber {
-  consumer: Consumer;
+  consumer?: Consumer;
   id: string;
-  kafka: KafkaType;
+  kafka?: KafkaType;
   kafkaConfig: { brokers: string[] } & Pick<KafkaConfig, 'connectionTimeout' | 'sasl' | 'ssl'>;
   protected messages: ConsumedMessage[] = [];
   timeOfSubscription: number;
@@ -29,10 +29,17 @@ export class Subscriber {
     { connectionTimeout, sasl, ssl = false }: SubscribeOptions,
     id?: string,
     groupIdOverride?: string,
+    createConsumer: boolean = true,
   ) {
     this.timeOfSubscription = Date.now();
     this.topic = topic;
     this.kafkaConfig = { brokers, connectionTimeout, sasl, ssl };
+    this.id = id || randomUUID();
+
+    if (!createConsumer) {
+      return;
+    }
+
     this.kafka = new Kafka({
       kafkaJS: {
         brokers: prepareBrokers(brokers),
@@ -43,7 +50,7 @@ export class Subscriber {
         ssl,
       },
     });
-    this.id = id || randomUUID();
+
     const groupId = groupIdOverride || this.id;
     this.consumer = this.kafka.consumer({ kafkaJS: { fromBeginning: false, groupId } });
   }
@@ -57,6 +64,10 @@ export class Subscriber {
   }
 
   async subscribe(timestamp?: number): Promise<void> {
+    if (!this.consumer || !this.kafka) {
+      throw new Error('Kafka consumer is not initialized');
+    }
+
     await this.consumer.connect();
     const partitions = await getPartitionsByTimestamp(this.kafka, this.topic, timestamp);
     await this.consumer.subscribe({ topic: this.topic });

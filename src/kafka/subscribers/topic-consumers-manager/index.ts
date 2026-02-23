@@ -151,7 +151,9 @@ const stopTopicConsumer = async (topic: string, redisClient: RedisClient, reason
   if (consumer) {
     try {
       log.warn({ reason, thisRelayInstanceId, topic }, 'Stopping topic consumer');
-      await consumer.consumer.disconnect();
+      if (consumer.consumer) {
+        await consumer.consumer.disconnect();
+      }
     } catch (error) {
       log.error({ error, topic }, 'Failed stopping topic consumer');
     }
@@ -181,12 +183,17 @@ class RedisTopicConsumer extends Subscriber {
       subscribeOptions,
       undefined,
       toTopicGroupId(subscribeParams.topic),
+      true,
     );
   }
 
   // For topic consumers we want crash recovery using Kafka committed offsets.
   // Therefore: only seek by timestamp when the caller explicitly provides one.
   async subscribe(timestamp?: number): Promise<void> {
+    if (!this.consumer || !this.kafka) {
+      throw new Error('Kafka consumer is not initialized');
+    }
+
     await this.consumer.connect();
     await this.consumer.subscribe({ topic: this.topic });
     await this.consumer.run({
@@ -227,7 +234,7 @@ class RedisTopicConsumer extends Subscriber {
 }
 
 const getPartitionsByTimestamp = async (
-  kafka: RedisTopicConsumer['kafka'],
+  kafka: NonNullable<RedisTopicConsumer['kafka']>,
   topic: string,
   timestamp: number,
 ): Promise<PartitionOffset[]> => {
