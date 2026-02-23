@@ -15,7 +15,7 @@ import {
   TOPIC_LEADER_LOCK_TTL_SECONDS,
   TOPIC_MESSAGES_TTL_SECONDS,
 } from '../constants';
-import { fromKafkaToConsumedMessage } from '../messages';
+import { fromKafkaToConsumedMessage, normalizeConsumedMessageValue } from '../messages';
 import { toTopicLeaderKey, toTopicMessagesKey } from '../redis-keys';
 import { Subscriber } from '../subscriber';
 import { toTopicGroupId } from '../topic-utils';
@@ -213,9 +213,7 @@ class RedisTopicConsumer extends Subscriber {
   async addMessage({ message }: EachMessagePayload): Promise<void> {
     const consumedMessage = await fromKafkaToConsumedMessage(message);
 
-    const normalizedValue = typeof consumedMessage.value === 'string'
-      ? consumedMessage.value
-      : JSON.parse(consumedMessage.value.toString());
+    const normalizedValue = normalizeConsumedMessageValue(consumedMessage.value);
 
     const messageToStore = {
       ...consumedMessage,

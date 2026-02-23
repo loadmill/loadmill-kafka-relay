@@ -10,6 +10,7 @@ import { MAX_TOPIC_MESSAGES_LENGTH, TOPIC_MESSAGES_TTL_SECONDS } from './constan
 import {
   fromKafkaToConsumedMessage,
   getMessagesFromRedis,
+  normalizeConsumedMessageValue,
 } from './messages';
 import { toTopicMessagesKey } from './redis-keys';
 import { ShallowSubscriber, Subscriber } from './subscriber';
@@ -35,9 +36,7 @@ export class RedisSubscriber extends Subscriber {
     const consumedMessage = await fromKafkaToConsumedMessage(message);
 
     // Normalize the value to ensure Avro union types are type mapped
-    const normalizedValue = typeof consumedMessage.value === 'string'
-      ? consumedMessage.value
-      : JSON.parse(consumedMessage.value.toString());
+    const normalizedValue = normalizeConsumedMessageValue(consumedMessage.value);
 
     const messageToStore = {
       ...consumedMessage,

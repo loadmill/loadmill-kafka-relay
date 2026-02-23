@@ -27,6 +27,23 @@ export const fromKafkaToConsumedMessage = async (message: KafkaMessage): Promise
   };
 };
 
+export const normalizeConsumedMessageValue = (value: ConsumedMessage['value']): unknown => {
+  if (typeof value !== 'string') {
+    return value;
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed.startsWith('{') && !trimmed.startsWith('[')) {
+    return value;
+  }
+
+  try {
+    return JSON.parse(value);
+  } catch {
+    return value;
+  }
+};
+
 export const getMessagesFromRedis = async (topic: string): Promise<ConsumedMessage[]> => {
   const serializedMessages = await getRedisClient().lRange(toTopicMessagesKey(topic), 0, -1);
   const messages = serializedMessages.map(
