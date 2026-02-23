@@ -38,7 +38,7 @@ export const initPeriodicDiagnosticsLogger = (): void => {
         // ignore
       }
     })();
-  }, 20 * 1000);
+  }, 60 * 1000);
 
   timer.unref();
 };
