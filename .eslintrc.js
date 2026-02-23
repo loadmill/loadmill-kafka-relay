@@ -42,6 +42,12 @@ module.exports = {
         'no-console': 'off',
       },
     },
+    {
+      files: ['src/kafka/subscribers/topic-consumers-manager/index.ts'],
+      rules: {
+        'no-constant-condition': 'off',
+      },
+    },
   ],
   parser: '@typescript-eslint/parser',
   parserOptions: {

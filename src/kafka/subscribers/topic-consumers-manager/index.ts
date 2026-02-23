@@ -46,44 +46,59 @@ export const ensureTopicConsumerRunning = async (
   { connectionTimeout, sasl, ssl }: SubscribeOptions,
   timestamp?: number,
 ): Promise<void> => {
-  const existing = topics.get(topic);
-  if (existing?.startPromise) {
-    await existing.startPromise;
+  // `startPromise` is treated as "start in progress" only.
+  // It must not permanently short-circuit future leadership attempts.
+  // If a start is already in progress, wait for it and re-check state.
+  // (This avoids a race where a follower waits for a non-leader attempt and then returns forever.)
+  while (true) {
+    const existing = topics.get(topic);
+    if (existing?.startPromise) {
+      await existing.startPromise;
+      continue;
+    }
+
+    if (existing?.consumer) {
+      return;
+    }
+
+    const entry: TopicEntry = existing || {};
+    topics.set(topic, entry);
+
+    entry.startPromise = (async () => {
+      const isLeader = await acquireOrConfirmLeadership(topic);
+      if (!isLeader) {
+        return;
+      }
+
+      if (!entry.renewIntervalId) {
+        entry.renewIntervalId = setInterval(() => {
+          void renewLeadershipOrStop(topic);
+        }, TOPIC_LEADER_LOCK_RENEW_INTERVAL_MS);
+      }
+
+      if (entry.consumer) {
+        return;
+      }
+
+      log.info({ thisRelayInstanceId, topic }, 'Starting topic consumer');
+      entry.consumer = new RedisTopicConsumer(
+        { brokers, topic },
+        { connectionTimeout, sasl, ssl },
+      );
+
+      await entry.consumer.subscribe(timestamp);
+    })()
+      .catch((error) => {
+        log.error({ error, topic }, 'Failed starting topic consumer');
+        throw error;
+      })
+      .finally(() => {
+        entry.startPromise = undefined;
+      });
+
+    await entry.startPromise;
     return;
   }
-
-  const entry: TopicEntry = existing || {};
-  topics.set(topic, entry);
-
-  entry.startPromise = (async () => {
-    const isLeader = await acquireOrConfirmLeadership(topic);
-    if (!isLeader) {
-      return;
-    }
-
-    if (!entry.renewIntervalId) {
-      entry.renewIntervalId = setInterval(() => {
-        void renewLeadershipOrStop(topic);
-      }, TOPIC_LEADER_LOCK_RENEW_INTERVAL_MS);
-    }
-
-    if (entry.consumer) {
-      return;
-    }
-
-    log.info({ thisRelayInstanceId, topic }, 'Starting topic consumer');
-    entry.consumer = new RedisTopicConsumer(
-      { brokers, topic },
-      { connectionTimeout, sasl, ssl },
-    );
-
-    await entry.consumer.subscribe(timestamp);
-  })().catch((error) => {
-    log.error({ error, topic }, 'Failed starting topic consumer');
-    throw error;
-  });
-
-  await entry.startPromise;
 };
 
 const acquireOrConfirmLeadership = async (topic: string): Promise<boolean> => {
