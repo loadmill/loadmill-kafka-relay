@@ -1,7 +1,6 @@
 import { getLocalSubscribers } from '../kafka/subscribers';
-import { toMessagesKey } from '../kafka/subscribers/redis-keys';
+import { toTopicMessagesKey } from '../kafka/subscribers/redis-keys';
 import { RedisSubscribers } from '../kafka/subscribers/redis-subscriber';
-import { Subscriber } from '../kafka/subscribers/subscriber';
 import log from '../log';
 import { isMultiInstance } from '../multi-instance';
 import { getRedisClient } from '../redis/redis-client';
@@ -52,28 +51,28 @@ const _getTopicsUsageForLog = async (subscribers: RedisSubscribers): Promise<_To
 const _getRawTopicsUsage = async (subscribers: RedisSubscribers): Promise<_RawTopicsUsage> => {
   const rawTopicsUsage: _RawTopicsUsage = {};
 
+  for (const subscriber of Object.values(subscribers)) {
+    rawTopicsUsage[subscriber.topic] ??= { bytes: 0, messages: 0, subscribers: 0 };
+    rawTopicsUsage[subscriber.topic].subscribers += 1;
+  }
+
+  const redisClient = getRedisClient();
+  const topics = Object.keys(rawTopicsUsage);
+
   await Promise.all(
-    Object.values(subscribers)
-      .map(subscriber => _addSubscriberUsage(rawTopicsUsage, subscriber)),
+    topics.map(async (topic) => {
+      const messagesKey = toTopicMessagesKey(topic);
+
+      const [numberOfMessages, redisBytes] = await Promise.all([
+        redisClient.lLen(messagesKey),
+        redisClient.sendCommand(['MEMORY', 'USAGE', messagesKey]),
+      ]);
+
+      rawTopicsUsage[topic].messages = numberOfMessages;
+      rawTopicsUsage[topic].bytes = _toNumberOrZero(redisBytes);
+    }),
   );
   return rawTopicsUsage;
-};
-
-const _addSubscriberUsage = async (rawTopicsUsage: _RawTopicsUsage, subscriber: Subscriber) => {
-  const messagesKey = toMessagesKey(subscriber.id);
-
-  const [numberOfMessages, redisBytes] = await Promise.all([
-    getRedisClient().lLen(messagesKey),
-    getRedisClient().sendCommand(['MEMORY', 'USAGE', messagesKey]),
-  ]);
-
-  const numberOfBytes = _toNumberOrZero(redisBytes);
-
-  const totals = rawTopicsUsage[subscriber.topic] ?? { bytes: 0, messages: 0, subscribers: 0 };
-  totals.bytes += numberOfBytes;
-  totals.messages += numberOfMessages;
-  totals.subscribers += 1;
-  rawTopicsUsage[subscriber.topic] = totals;
 };
 
 const _toNumberOrZero = (value: unknown): number => {
