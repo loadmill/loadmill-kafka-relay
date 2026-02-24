@@ -1,27 +1,17 @@
-import {
-  Consumer,
-  EachMessagePayload,
-  PartitionOffset,
-} from '@confluentinc/kafka-javascript/types/kafkajs';
-
 import log from '../../../log';
 import { thisRelayInstanceId } from '../../../multi-instance';
 import { getRedisClient } from '../../../redis/redis-client';
 import { RedisClient } from '../../../redis/types';
 import { SubscribeOptions, SubscribeParams } from '../../../types';
 import {
-  MAX_TOPIC_MESSAGES_LENGTH,
   TOPIC_LEADER_LOCK_RENEW_INTERVAL_MS,
   TOPIC_LEADER_LOCK_TTL_SECONDS,
-  TOPIC_MESSAGES_TTL_SECONDS,
 } from '../constants';
-import { fromKafkaToConsumedMessage, normalizeConsumedMessageValue } from '../messages';
-import { toTopicLeaderKey, toTopicMessagesKey } from '../redis-keys';
-import { Subscriber } from '../subscriber';
-import { toTopicGroupId } from '../topic-utils';
+import { toTopicLeaderKey } from '../redis-keys';
+import { RedisSubscriber } from '../redis-subscriber';
 
 type TopicEntry = {
-  consumer?: RedisTopicConsumer;
+  consumer?: RedisSubscriber;
   renewIntervalId?: NodeJS.Timeout;
   startPromise?: Promise<void>;
 };
@@ -71,12 +61,13 @@ export const ensureTopicConsumerRunning = async (
       }
 
       log.info({ thisRelayInstanceId, topic }, 'Starting topic consumer');
-      entry.consumer = new RedisTopicConsumer(
+      entry.consumer = new RedisSubscriber(
         { brokers, topic },
         { connectionTimeout, sasl, ssl },
+        { asTopicConsumer: true },
       );
 
-      await entry.consumer.subscribe(timestamp);
+      await entry.consumer.subscribeAsTopicConsumer(timestamp);
     })()
       .catch((error) => {
         log.error({ error, topic }, 'Failed starting topic consumer');
@@ -156,84 +147,4 @@ const stopTopicConsumer = async (topic: string, redisClient: RedisClient, reason
   } catch {
     // ignore
   }
-};
-
-class RedisTopicConsumer extends Subscriber {
-  private readonly redisClient: RedisClient = getRedisClient();
-
-  constructor(
-    subscribeParams: SubscribeParams,
-    subscribeOptions: SubscribeOptions,
-  ) {
-    super(
-      subscribeParams,
-      subscribeOptions,
-      undefined,
-      toTopicGroupId(subscribeParams.topic),
-      true,
-    );
-  }
-
-  // For topic consumers we want crash recovery using Kafka committed offsets.
-  // Therefore: only seek by timestamp when the caller explicitly provides one.
-  async subscribe(timestamp?: number): Promise<void> {
-    if (!this.consumer || !this.kafka) {
-      throw new Error('Kafka consumer is not initialized');
-    }
-
-    await this.consumer.connect();
-    await this.consumer.subscribe({ topic: this.topic });
-    await this.consumer.run({
-      eachMessage: async (payload) => {
-        await this.addMessage(payload);
-      },
-    });
-
-    if (timestamp == null) {
-      return;
-    }
-
-    const partitions = await getPartitionsByTimestamp(this.kafka, this.topic, timestamp);
-    await assignPartitions(this.consumer, partitions, this.topic);
-  }
-
-  async addMessage({ message }: EachMessagePayload): Promise<void> {
-    const consumedMessage = await fromKafkaToConsumedMessage(message);
-
-    const normalizedValue = normalizeConsumedMessageValue(consumedMessage.value);
-
-    const messageToStore = {
-      ...consumedMessage,
-      value: normalizedValue,
-    };
-
-    const serializedMessage = JSON.stringify(messageToStore);
-    const messagesKey = toTopicMessagesKey(this.topic);
-
-    await this.redisClient.multi()
-      .rPush(messagesKey, serializedMessage)
-      .lTrim(messagesKey, -MAX_TOPIC_MESSAGES_LENGTH, -1)
-      .expire(messagesKey, TOPIC_MESSAGES_TTL_SECONDS)
-      .exec();
-  }
-}
-
-const getPartitionsByTimestamp = async (
-  kafka: NonNullable<RedisTopicConsumer['kafka']>,
-  topic: string,
-  timestamp: number,
-): Promise<PartitionOffset[]> => {
-  const admin = kafka.admin();
-  await admin.connect();
-  const partitions = await admin.fetchTopicOffsetsByTimestamp(topic, timestamp);
-  await admin.disconnect();
-  return partitions;
-};
-
-const assignPartitions = async (consumer: Consumer, partitions: PartitionOffset[], topic: string) => {
-  await Promise.all(
-    partitions.map(({ offset, partition }) =>
-      consumer.seek({ offset, partition, topic }),
-    ),
-  );
 };

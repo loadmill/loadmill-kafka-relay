@@ -271,8 +271,7 @@ export class RedisSubscribersManager extends SubscribersManager {
       const subscriber = new RedisSubscriber(
         { brokers, topic },
         { connectionTimeout, sasl, ssl },
-        { id: subscriberId, timeOfSubscription },
-        debug && { instanceId },
+        { debugParams: debug && { instanceId }, takeOverParams: { id: subscriberId, timeOfSubscription } },
       );
       return subscriber;
     }
