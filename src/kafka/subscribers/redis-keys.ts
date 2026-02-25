@@ -17,3 +17,6 @@ export const toTopicMessagesKey = (topic: string): string =>
 
 export const toTopicLeaderKey = (topic: string): string =>
   `${kafkaRelayPrefixKey}:topics:${encodeKeyPart(topic)}:leader`;
+
+export const toTopicPartitionOffsetWatermarksKey = (topic: string): string =>
+  `${kafkaRelayPrefixKey}:topics:${encodeKeyPart(topic)}:partition-offset-watermarks`;
