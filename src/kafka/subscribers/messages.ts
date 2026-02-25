@@ -28,20 +28,9 @@ export const fromKafkaToConsumedMessage = async (message: KafkaMessage): Promise
 };
 
 export const normalizeConsumedMessageValue = (value: ConsumedMessage['value']): unknown => {
-  if (typeof value !== 'string') {
-    return value;
-  }
-
-  const trimmed = value.trim();
-  if (!trimmed.startsWith('{') && !trimmed.startsWith('[')) {
-    return value;
-  }
-
-  try {
-    return JSON.parse(value);
-  } catch {
-    return value;
-  }
+  return typeof value === 'string' ?
+    value :
+    JSON.parse(value.toString());
 };
 
 export const getMessagesFromRedis = async (topic: string): Promise<ConsumedMessage[]> => {
