@@ -10,7 +10,10 @@ type StoredMessage = {
   value: string;
 };
 
-describe('redis topic dedupe integration', () => {
+const runRedisIntegrationTests = process.env.RUN_REDIS_INTEGRATION_TESTS === 'true';
+const describeRedisIntegration = runRedisIntegrationTests ? describe : describe.skip;
+
+describeRedisIntegration('redis topic dedupe integration', () => {
   const TEST_TTL_SECONDS = 5;
   const redisClient = createClient({
     url: process.env.REDIS_URL || 'redis://localhost:6379',
