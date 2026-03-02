@@ -79,6 +79,18 @@ export class RedisSubscriber extends Subscriber {
     }
   }
 
+  // Re-seeks a running topic consumer to a past timestamp and resets the
+  // deduplication watermark so replayed messages are not silently dropped.
+  async reseekToTimestamp(timestamp: number): Promise<void> {
+    if (!this.consumer || !this.kafka) {
+      throw new Error('Kafka consumer is not initialized');
+    }
+    const watermarkKey = toTopicPartitionOffsetWatermarksKey(this.topic);
+    await this.redisClient.del(watermarkKey);
+    const partitions = await getPartitionsByTimestamp(this.kafka, this.topic, timestamp);
+    await seekToPartitions(this.consumer, partitions, this.topic);
+  }
+
   // Used when this subscriber acts as the shared topic consumer (asTopicConsumer = true).
   // Only seeks by timestamp when explicitly provided — crash recovery relies on committed offsets.
   async subscribeAsTopicConsumer(timestamp?: number): Promise<void> {
