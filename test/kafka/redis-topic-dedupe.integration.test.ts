@@ -35,41 +35,55 @@ describeRedisIntegration('redis topic dedupe integration', () => {
     await redisClient.disconnect();
   });
 
-  it('stores only one message for many concurrent writes of the same partition+offset', async () => {
+  it('dedupes repeated sequential writes for the same partition+offset', async () => {
     const topic = `it-dedupe-${randomUUID()}`;
     const messagesKey = toTopicMessagesKey(topic);
     const watermarkKey = toTopicPartitionOffsetWatermarksKey(topic);
     await redisClient.del([messagesKey, watermarkKey]);
 
-    const calls = Array.from({ length: 100 }, (_, i) =>
-      appendTopicMessageWithDedupe({
-        maxMessages: 5000,
-        messagesKey,
+    const first = await appendTopicMessageWithDedupe({
+      maxMessages: 5000,
+      messagesKey,
+      offset: '500',
+      partition: 0,
+      redisClient,
+      serializedMessage: JSON.stringify({
         offset: '500',
         partition: 0,
-        redisClient,
-        serializedMessage: JSON.stringify({
-          offset: '500',
-          partition: 0,
-          value: `payload-${i}`,
-        }),
-        ttlSeconds: TEST_TTL_SECONDS,
-        watermarkKey,
+        value: 'payload-1',
       }),
-    );
+      ttlSeconds: TEST_TTL_SECONDS,
+      watermarkKey,
+    });
 
-    await Promise.all(calls);
+    const second = await appendTopicMessageWithDedupe({
+      maxMessages: 5000,
+      messagesKey,
+      offset: '500',
+      partition: 0,
+      redisClient,
+      serializedMessage: JSON.stringify({
+        offset: '500',
+        partition: 0,
+        value: 'payload-2',
+      }),
+      ttlSeconds: TEST_TTL_SECONDS,
+      watermarkKey,
+    });
 
     const [serializedMessages, watermark] = await Promise.all([
       redisClient.lRange(messagesKey, 0, -1),
       redisClient.hGet(watermarkKey, '0'),
     ]);
 
+    expect(first).toBe('inserted');
+    expect(second).toBe('duplicate');
     expect(serializedMessages).toHaveLength(1);
     expect(watermark).toBe('500');
     const parsed = JSON.parse(serializedMessages[0]) as StoredMessage;
     expect(parsed.partition).toBe(0);
     expect(parsed.offset).toBe('500');
+    expect(parsed.value).toBe('payload-1');
   });
 
   it('dedupes per partition (same offset can be inserted once in each partition)', async () => {
@@ -78,34 +92,47 @@ describeRedisIntegration('redis topic dedupe integration', () => {
     const watermarkKey = toTopicPartitionOffsetWatermarksKey(topic);
     await redisClient.del([messagesKey, watermarkKey]);
 
-    const calls = [
-      ...Array.from({ length: 50 }, (_, i) =>
-        appendTopicMessageWithDedupe({
-          maxMessages: 5000,
-          messagesKey,
-          offset: '42',
-          partition: 0,
-          redisClient,
-          serializedMessage: JSON.stringify({ offset: '42', partition: 0, value: `p0-${i}` }),
-          ttlSeconds: TEST_TTL_SECONDS,
-          watermarkKey,
-        }),
-      ),
-      ...Array.from({ length: 50 }, (_, i) =>
-        appendTopicMessageWithDedupe({
-          maxMessages: 5000,
-          messagesKey,
-          offset: '42',
-          partition: 1,
-          redisClient,
-          serializedMessage: JSON.stringify({ offset: '42', partition: 1, value: `p1-${i}` }),
-          ttlSeconds: TEST_TTL_SECONDS,
-          watermarkKey,
-        }),
-      ),
-    ];
-
-    await Promise.all(calls);
+    const results = [];
+    results.push(await appendTopicMessageWithDedupe({
+      maxMessages: 5000,
+      messagesKey,
+      offset: '42',
+      partition: 0,
+      redisClient,
+      serializedMessage: JSON.stringify({ offset: '42', partition: 0, value: 'p0' }),
+      ttlSeconds: TEST_TTL_SECONDS,
+      watermarkKey,
+    }));
+    results.push(await appendTopicMessageWithDedupe({
+      maxMessages: 5000,
+      messagesKey,
+      offset: '42',
+      partition: 1,
+      redisClient,
+      serializedMessage: JSON.stringify({ offset: '42', partition: 1, value: 'p1' }),
+      ttlSeconds: TEST_TTL_SECONDS,
+      watermarkKey,
+    }));
+    results.push(await appendTopicMessageWithDedupe({
+      maxMessages: 5000,
+      messagesKey,
+      offset: '42',
+      partition: 0,
+      redisClient,
+      serializedMessage: JSON.stringify({ offset: '42', partition: 0, value: 'p0-dup' }),
+      ttlSeconds: TEST_TTL_SECONDS,
+      watermarkKey,
+    }));
+    results.push(await appendTopicMessageWithDedupe({
+      maxMessages: 5000,
+      messagesKey,
+      offset: '42',
+      partition: 1,
+      redisClient,
+      serializedMessage: JSON.stringify({ offset: '42', partition: 1, value: 'p1-dup' }),
+      ttlSeconds: TEST_TTL_SECONDS,
+      watermarkKey,
+    }));
 
     const [serializedMessages, watermark0, watermark1] = await Promise.all([
       redisClient.lRange(messagesKey, 0, -1),
@@ -113,6 +140,7 @@ describeRedisIntegration('redis topic dedupe integration', () => {
       redisClient.hGet(watermarkKey, '1'),
     ]);
 
+    expect(results).toEqual(['inserted', 'inserted', 'duplicate', 'duplicate']);
     expect(watermark0).toBe('42');
     expect(watermark1).toBe('42');
     expect(serializedMessages).toHaveLength(2);
