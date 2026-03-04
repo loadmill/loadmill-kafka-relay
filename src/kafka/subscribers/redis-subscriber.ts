@@ -12,7 +12,11 @@ import { RedisClient } from '../../redis/types';
 import { ConsumedMessage, SubscribeOptions, SubscribeParams } from '../../types';
 import { KafkaType } from '../../types/kafkajs-confluent';
 
-import { MAX_TOPIC_MESSAGES_LENGTH, TOPIC_MESSAGES_TTL_SECONDS } from './constants';
+import {
+  getTopicConsumerLookbackTimestamp,
+  MAX_TOPIC_MESSAGES_LENGTH,
+  TOPIC_MESSAGES_TTL_SECONDS,
+} from './constants';
 import {
   fromKafkaToConsumedMessage,
   getMessagesFromRedis,
@@ -30,12 +34,14 @@ import { toTopicGroupId } from './topic-utils';
 export type RedisSubscriberOptions = {
   asTopicConsumer?: boolean;
   debugParams?: { instanceId: string };
+  requestedStartTimestamp?: number;
   takeOverParams?: TakeOverParams;
 };
 
 export class RedisSubscriber extends Subscriber {
   private redisClient: RedisClient = getRedisClient();
   readonly instanceId: string = thisRelayInstanceId;
+  readonly requestedStartTimestamp: number;
 
   constructor(
     subscribeParams: SubscribeParams,
@@ -47,6 +53,7 @@ export class RedisSubscriber extends Subscriber {
     super(subscribeParams, subscribeOptions, takeOverParams?.id, groupId, asTopicConsumer);
     takeOverParams && (this.timeOfSubscription = takeOverParams.timeOfSubscription);
     debugParams && (this.instanceId = debugParams.instanceId);
+    this.requestedStartTimestamp = options?.requestedStartTimestamp ?? get1MinuteAgoTimestamp();
   }
 
   async addMessage({ message, partition }: EachMessagePayload): Promise<void> {
@@ -92,7 +99,7 @@ export class RedisSubscriber extends Subscriber {
   }
 
   // Used when this subscriber acts as the shared topic consumer (asTopicConsumer = true).
-  // If no timestamp is provided, default to 1 minute ago (same behavior as base Subscriber).
+  // If no timestamp is provided, default to topic-consumer lookback.
   async subscribeAsTopicConsumer(timestamp?: number): Promise<void> {
     if (!this.consumer || !this.kafka) {
       throw new Error('Kafka consumer is not initialized');
@@ -106,14 +113,14 @@ export class RedisSubscriber extends Subscriber {
       },
     });
 
-    const effectiveTimestamp = timestamp ?? this.get1MinuteAgoTimestamp();
+    const effectiveTimestamp = timestamp ?? getTopicConsumerLookbackTimestamp();
     const partitions = await getPartitionsByTimestamp(this.kafka, this.topic, effectiveTimestamp);
     await seekToPartitions(this.consumer, partitions, this.topic);
   }
 
   // In multi-instance mode we keep *one* Kafka consumer per topic (per cluster) and store messages once.
   // Each subscriber only records metadata (id/topic/subscription time) and reads from the topic list.
-  async subscribe(timestamp?: number): Promise<void> {
+  async subscribe(): Promise<void> {
     await ensureTopicConsumerRunning(
       { brokers: this.kafkaConfig.brokers, topic: this.topic },
       {
@@ -121,7 +128,6 @@ export class RedisSubscriber extends Subscriber {
         sasl: this.kafkaConfig.sasl,
         ssl: this.kafkaConfig.ssl,
       },
-      timestamp,
     );
   }
 
@@ -164,3 +170,5 @@ const seekToPartitions = async (consumer: Consumer, partitions: PartitionOffset[
     ),
   );
 };
+
+const get1MinuteAgoTimestamp = (): number => Date.now() - 60 * 1000;

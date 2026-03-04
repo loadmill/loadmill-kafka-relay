@@ -118,9 +118,13 @@ export class RedisSubscribersManager extends SubscribersManager {
 
   add = async (
     { brokers, topic }: SubscribeParams,
-    { connectionTimeout, sasl, ssl }: SubscribeOptions,
+    { connectionTimeout, sasl, ssl, timestamp }: SubscribeOptions,
   ): Promise<RedisSubscriber> => {
-    const subscriber = new RedisSubscriber({ brokers, topic }, { connectionTimeout, sasl, ssl });
+    const subscriber = new RedisSubscriber(
+      { brokers, topic },
+      { connectionTimeout, sasl, ssl },
+      { requestedStartTimestamp: timestamp ?? get1MinuteAgoTimestamp() },
+    );
 
     await this.addSubscriberToRedis(subscriber);
 
@@ -128,13 +132,14 @@ export class RedisSubscribersManager extends SubscribersManager {
   };
 
   private addSubscriberToRedis = async (subscriber: RedisSubscriber) => {
-    const { id, instanceId, kafkaConfig, timeOfSubscription, topic } = subscriber;
+    const { id, instanceId, kafkaConfig, requestedStartTimestamp, timeOfSubscription, topic } = subscriber;
     log.debug({ id, topic }, 'Adding subscriber to Redis');
     this.subscribers[id] = subscriber;
     const serializedSubscriber = JSON.stringify({
       id,
       instanceId,
       kafkaConfig,
+      requestedStartTimestamp,
       timeOfSubscription,
       topic,
     });
@@ -180,9 +185,11 @@ export class RedisSubscribersManager extends SubscribersManager {
           sasl: localSubscriber.kafkaConfig.sasl,
           ssl: localSubscriber.kafkaConfig.ssl,
         },
-        undefined,
       );
-      return await getMessagesFromRedis(localSubscriber.topic);
+      const allMessages = await getMessagesFromRedis(localSubscriber.topic);
+      return allMessages.filter(
+        m => Number(m.timestamp) >= localSubscriber.requestedStartTimestamp,
+      );
     }
 
     const redisSubscriber = await this.getSubscriberFromRedis(subscriberId);
@@ -195,10 +202,17 @@ export class RedisSubscribersManager extends SubscribersManager {
     await ensureTopicConsumerRunning(
       { brokers, topic },
       { connectionTimeout, sasl, ssl },
-      undefined,
     );
 
-    return await getMessagesFromRedis(topic);
+    const subscriber = await this.recreateSubscriberFromRedis(subscriberId, redisSubscriber.instanceId, true);
+    if (!subscriber) {
+      return [];
+    }
+
+    const allMessages = await getMessagesFromRedis(topic);
+    return allMessages.filter(
+      m => Number(m.timestamp) >= subscriber.requestedStartTimestamp,
+    );
   };
 
   private getSubscriberFromRedis = async (subscriberId: string): Promise<SerializedRedisSubscriber | undefined> => {
@@ -266,12 +280,22 @@ export class RedisSubscribersManager extends SubscribersManager {
     const serializedSubscriber = await this.redisClient.get(toSubscriberKey(subscriberId, relayInstanceId));
     if (serializedSubscriber) {
       log.debug({ subscriberId }, 'Recreating subscriber from Redis');
-      const { instanceId, kafkaConfig, timeOfSubscription, topic } = JSON.parse(serializedSubscriber) as SerializedRedisSubscriber;
+      const {
+        instanceId,
+        kafkaConfig,
+        requestedStartTimestamp,
+        timeOfSubscription,
+        topic,
+      } = JSON.parse(serializedSubscriber) as SerializedRedisSubscriber;
       const { brokers, connectionTimeout, sasl, ssl } = kafkaConfig;
       const subscriber = new RedisSubscriber(
         { brokers, topic },
         { connectionTimeout, sasl, ssl },
-        { debugParams: debug && { instanceId }, takeOverParams: { id: subscriberId, timeOfSubscription } },
+        {
+          debugParams: debug && { instanceId },
+          requestedStartTimestamp,
+          takeOverParams: { id: subscriberId, timeOfSubscription },
+        },
       );
       return subscriber;
     }
@@ -285,32 +309,13 @@ export class RedisSubscribersManager extends SubscribersManager {
       const subscriber = await this.recreateSubscriberFromRedis(id, fromInstanceId);
       if (subscriber) {
         await this.addSubscriberToRedis(subscriber);
-        const timestamp = await this.inferTimestamp(subscriber);
-        await subscriber.subscribe(timestamp);
+        await subscriber.subscribe();
       }
       await this.deleteSubscriberFromRedis(id, fromInstanceId);
     }));
   };
-
-  /**
-   * If taking over subscribers from another instance,
-   * infer the timestamp from the latest message.
-   */
-  private inferTimestamp = async (subscriber: RedisSubscriber): Promise<number | undefined> => {
-    let timestamp;
-    const messages = await subscriber.getMessages();
-    if (messages.length > 0) {
-      const latestMessage = this.getLatestMessageByTimestamp(messages);
-      timestamp = Number(latestMessage.timestamp) + 1; // Add 1 to avoid duplicate messages
-    }
-    return timestamp;
-  };
-
-  private getLatestMessageByTimestamp = (messages: ConsumedMessage[]): ConsumedMessage => {
-    return messages.reduce((latest, current) => {
-      return current.timestamp > latest.timestamp ? current : latest;
-    });
-  };
 }
 
 type instanceId = string;
+
+const get1MinuteAgoTimestamp = (): number => Date.now() - 60 * 1000;

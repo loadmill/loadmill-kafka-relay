@@ -1,3 +1,6 @@
+import {
+  TOPIC_CONSUMER_LOOKBACK_MS,
+} from '../../src/kafka/subscribers/constants';
 import { ensureTopicConsumerRunning } from '../../src/kafka/subscribers/topic-consumers-manager';
 import { getRedisClient } from '../../src/redis/redis-client';
 
@@ -30,6 +33,24 @@ describe('ensureTopicConsumerRunning', () => {
     jest.clearAllMocks();
   });
 
+  it('starts consumer with lookback timestamp when no consumer exists', async () => {
+    const nowSpy = jest.spyOn(Date, 'now').mockReturnValue(1700000000000);
+    try {
+      const topic = nextTopic();
+      const mockRedisClient = { set: jest.fn().mockResolvedValue('OK') };
+      mockGetRedisClient.mockReturnValue(mockRedisClient as never);
+
+      await ensureTopicConsumerRunning({ brokers: ['kafka:9092'], topic }, subscribeOptions);
+
+      expect(mockSubscribeAsTopicConsumer).toHaveBeenCalledTimes(1);
+      expect(mockSubscribeAsTopicConsumer).toHaveBeenCalledWith(
+        1700000000000 - TOPIC_CONSUMER_LOOKBACK_MS,
+      );
+    } finally {
+      nowSpy.mockRestore();
+    }
+  });
+
   describe('when consumer is already running', () => {
     const seedRunningConsumer = async (topic: string) => {
       const mockRedisClient = { lLen: jest.fn().mockResolvedValue(1), set: jest.fn().mockResolvedValue('OK') };
@@ -39,37 +60,41 @@ describe('ensureTopicConsumerRunning', () => {
       return mockRedisClient;
     };
 
-    it('re-seeks when timestamp is provided and messages key is empty', async () => {
+    it('re-seeks with lookback timestamp when messages key is empty', async () => {
+      const nowSpy = jest.spyOn(Date, 'now').mockReturnValue(1700000000000);
       const topic = nextTopic();
       const redisClient = await seedRunningConsumer(topic);
       redisClient.lLen.mockResolvedValue(0);
       mockGetRedisClient.mockReturnValue(redisClient as never);
 
-      await ensureTopicConsumerRunning({ brokers: ['kafka:9092'], topic }, subscribeOptions, 99999);
+      await ensureTopicConsumerRunning({ brokers: ['kafka:9092'], topic }, subscribeOptions);
 
       expect(redisClient.lLen).toHaveBeenCalledWith(`kafka-relay:topics:${topic}:messages`);
-      expect(mockReseekToTimestamp).toHaveBeenCalledWith(99999);
+      expect(mockReseekToTimestamp).toHaveBeenCalledWith(
+        1700000000000 - TOPIC_CONSUMER_LOOKBACK_MS,
+      );
+      nowSpy.mockRestore();
     });
 
-    it('does not re-seek when timestamp is provided but messages key is non-empty', async () => {
+    it('does not re-seek when messages key is non-empty', async () => {
       const topic = nextTopic();
       const redisClient = await seedRunningConsumer(topic);
       redisClient.lLen.mockResolvedValue(5);
       mockGetRedisClient.mockReturnValue(redisClient as never);
 
-      await ensureTopicConsumerRunning({ brokers: ['kafka:9092'], topic }, subscribeOptions, 99999);
+      await ensureTopicConsumerRunning({ brokers: ['kafka:9092'], topic }, subscribeOptions);
 
       expect(mockReseekToTimestamp).not.toHaveBeenCalled();
     });
 
-    it('does not read Redis or re-seek when no timestamp is given', async () => {
+    it('accepts the 2-arg function signature and runs correctly', async () => {
       const topic = nextTopic();
       const redisClient = await seedRunningConsumer(topic);
       mockGetRedisClient.mockReturnValue(redisClient as never);
 
-      await ensureTopicConsumerRunning({ brokers: ['kafka:9092'], topic }, subscribeOptions, undefined);
+      await ensureTopicConsumerRunning({ brokers: ['kafka:9092'], topic }, subscribeOptions);
 
-      expect(redisClient.lLen).not.toHaveBeenCalled();
+      expect(redisClient.lLen).toHaveBeenCalledTimes(1);
       expect(mockReseekToTimestamp).not.toHaveBeenCalled();
     });
   });
