@@ -92,7 +92,7 @@ export class RedisSubscriber extends Subscriber {
   }
 
   // Used when this subscriber acts as the shared topic consumer (asTopicConsumer = true).
-  // Only seeks by timestamp when explicitly provided — crash recovery relies on committed offsets.
+  // If no timestamp is provided, default to 1 minute ago (same behavior as base Subscriber).
   async subscribeAsTopicConsumer(timestamp?: number): Promise<void> {
     if (!this.consumer || !this.kafka) {
       throw new Error('Kafka consumer is not initialized');
@@ -106,11 +106,8 @@ export class RedisSubscriber extends Subscriber {
       },
     });
 
-    if (timestamp == null) {
-      return;
-    }
-
-    const partitions = await getPartitionsByTimestamp(this.kafka, this.topic, timestamp);
+    const effectiveTimestamp = timestamp ?? get1MinuteAgoTimestamp();
+    const partitions = await getPartitionsByTimestamp(this.kafka, this.topic, effectiveTimestamp);
     await seekToPartitions(this.consumer, partitions, this.topic);
   }
 
@@ -167,3 +164,5 @@ const seekToPartitions = async (consumer: Consumer, partitions: PartitionOffset[
     ),
   );
 };
+
+const get1MinuteAgoTimestamp = () => Date.now() - 60 * 1000;

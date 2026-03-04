@@ -114,3 +114,64 @@ describe('RedisSubscriber.reseekToTimestamp', () => {
     expect(redisClient.del).toHaveBeenCalledWith(watermarkKey);
   });
 });
+
+describe('RedisSubscriber.subscribeAsTopicConsumer', () => {
+  const subscribeParams = { brokers: ['kafka:9092'], topic: 'test-topic' };
+
+  const makeKafka = (partitions: { offset: string; partition: number }[]) => {
+    const admin = {
+      connect: jest.fn().mockResolvedValue(undefined),
+      disconnect: jest.fn().mockResolvedValue(undefined),
+      fetchTopicOffsetsByTimestamp: jest.fn().mockResolvedValue(partitions),
+    };
+    return { _admin: admin, admin: jest.fn().mockReturnValue(admin) };
+  };
+
+  const makeRedisClient = () => ({ del: jest.fn().mockResolvedValue(1) });
+
+  const createSubscriber = () => {
+    mockGetRedisClient.mockReturnValue(makeRedisClient() as never);
+    return new RedisSubscriber(subscribeParams, {});
+  };
+
+  it('seeks from one minute ago when timestamp is not provided', async () => {
+    const nowSpy = jest.spyOn(Date, 'now').mockReturnValue(1700000000000);
+    try {
+      const consumer = {
+        connect: jest.fn().mockResolvedValue(undefined),
+        run: jest.fn().mockResolvedValue(undefined),
+        seek: jest.fn(),
+        subscribe: jest.fn().mockResolvedValue(undefined),
+      };
+      const { _admin: admin, admin: kafkaAdmin } = makeKafka([{ offset: '5', partition: 0 }]);
+      const subscriber = createSubscriber();
+      subscriber.consumer = consumer as never;
+      subscriber.kafka = { admin: kafkaAdmin } as never;
+
+      await subscriber.subscribeAsTopicConsumer(undefined);
+
+      expect(admin.fetchTopicOffsetsByTimestamp).toHaveBeenCalledWith('test-topic', 1699999940000);
+      expect(consumer.seek).toHaveBeenCalledWith({ offset: '5', partition: 0, topic: 'test-topic' });
+    } finally {
+      nowSpy.mockRestore();
+    }
+  });
+
+  it('uses explicit timestamp when provided', async () => {
+    const consumer = {
+      connect: jest.fn().mockResolvedValue(undefined),
+      run: jest.fn().mockResolvedValue(undefined),
+      seek: jest.fn(),
+      subscribe: jest.fn().mockResolvedValue(undefined),
+    };
+    const { _admin: admin, admin: kafkaAdmin } = makeKafka([{ offset: '7', partition: 1 }]);
+    const subscriber = createSubscriber();
+    subscriber.consumer = consumer as never;
+    subscriber.kafka = { admin: kafkaAdmin } as never;
+
+    await subscriber.subscribeAsTopicConsumer(1234567890000);
+
+    expect(admin.fetchTopicOffsetsByTimestamp).toHaveBeenCalledWith('test-topic', 1234567890000);
+    expect(consumer.seek).toHaveBeenCalledWith({ offset: '7', partition: 1, topic: 'test-topic' });
+  });
+});
