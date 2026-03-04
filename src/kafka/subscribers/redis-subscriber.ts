@@ -106,7 +106,7 @@ export class RedisSubscriber extends Subscriber {
       },
     });
 
-    const effectiveTimestamp = timestamp ?? get1MinuteAgoTimestamp();
+    const effectiveTimestamp = timestamp ?? this.get1MinuteAgoTimestamp();
     const partitions = await getPartitionsByTimestamp(this.kafka, this.topic, effectiveTimestamp);
     await seekToPartitions(this.consumer, partitions, this.topic);
   }
@@ -164,5 +164,3 @@ const seekToPartitions = async (consumer: Consumer, partitions: PartitionOffset[
     ),
   );
 };
-
-const get1MinuteAgoTimestamp = () => Date.now() - 60 * 1000;
