@@ -7,7 +7,7 @@ import {
   TOPIC_LEADER_LOCK_RENEW_INTERVAL_MS,
   TOPIC_LEADER_LOCK_TTL_SECONDS,
 } from '../constants';
-import { toTopicLeaderKey } from '../redis-keys';
+import { toTopicLeaderKey, toTopicMessagesKey } from '../redis-keys';
 import { RedisSubscriber } from '../redis-subscriber';
 
 type TopicEntry = {
@@ -35,6 +35,12 @@ export const ensureTopicConsumerRunning = async (
     }
 
     if (existing?.consumer) {
+      if (timestamp != null) {
+        const count = await getRedisClient().lLen(toTopicMessagesKey(topic));
+        if (count === 0) {
+          await existing.consumer.reseekToTimestamp(timestamp);
+        }
+      }
       return;
     }
 

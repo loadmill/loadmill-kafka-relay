@@ -78,6 +78,10 @@ export class Subscriber {
     });
     await assignPartitions(this.consumer, partitions, this.topic);
   }
+
+  protected get1MinuteAgoTimestamp(): number {
+    return get1MinuteAgoTimestamp();
+  }
 }
 
 const getPartitionsByTimestamp = async (

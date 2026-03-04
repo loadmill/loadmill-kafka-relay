@@ -5,6 +5,7 @@ import {
   PartitionOffset,
 } from '@confluentinc/kafka-javascript/types/kafkajs';
 
+import log from '../../log';
 import { thisRelayInstanceId } from '../../multi-instance';
 import { getRedisClient } from '../../redis/redis-client';
 import { RedisClient } from '../../redis/types';
@@ -17,7 +18,11 @@ import {
   getMessagesFromRedis,
   normalizeConsumedMessageValue,
 } from './messages';
-import { toTopicMessagesKey } from './redis-keys';
+import {
+  toTopicMessagesKey,
+  toTopicPartitionOffsetWatermarksKey,
+} from './redis-keys';
+import { appendTopicMessageWithDedupe } from './redis-topic-dedupe';
 import { ShallowSubscriber, Subscriber } from './subscriber';
 import { ensureTopicConsumerRunning } from './topic-consumers-manager';
 import { toTopicGroupId } from './topic-utils';
@@ -44,7 +49,7 @@ export class RedisSubscriber extends Subscriber {
     debugParams && (this.instanceId = debugParams.instanceId);
   }
 
-  async addMessage({ message }: EachMessagePayload): Promise<void> {
+  async addMessage({ message, partition }: EachMessagePayload): Promise<void> {
     const consumedMessage = await fromKafkaToConsumedMessage(message);
 
     // Normalize the value to ensure Avro union types are type mapped
@@ -52,21 +57,42 @@ export class RedisSubscriber extends Subscriber {
 
     const messageToStore = {
       ...consumedMessage,
+      partition,
       value: normalizedValue,
     };
 
     const serializedMessage = JSON.stringify(messageToStore);
     const messagesKey = toTopicMessagesKey(this.topic);
+    const watermarkKey = toTopicPartitionOffsetWatermarksKey(this.topic);
+    const result = await appendTopicMessageWithDedupe({
+      maxMessages: MAX_TOPIC_MESSAGES_LENGTH,
+      messagesKey,
+      offset: message.offset,
+      partition,
+      redisClient: this.redisClient,
+      serializedMessage,
+      ttlSeconds: TOPIC_MESSAGES_TTL_SECONDS,
+      watermarkKey,
+    });
+    if (result === 'duplicate') {
+      log.debug({ offset: message.offset, partition, topic: this.topic }, 'Skipped duplicate topic message');
+    }
+  }
 
-    await this.redisClient.multi()
-      .rPush(messagesKey, serializedMessage)
-      .lTrim(messagesKey, -MAX_TOPIC_MESSAGES_LENGTH, -1)
-      .expire(messagesKey, TOPIC_MESSAGES_TTL_SECONDS)
-      .exec();
+  // Re-seeks a running topic consumer to a past timestamp and resets the
+  // deduplication watermark so replayed messages are not silently dropped.
+  async reseekToTimestamp(timestamp: number): Promise<void> {
+    if (!this.consumer || !this.kafka) {
+      throw new Error('Kafka consumer is not initialized');
+    }
+    const watermarkKey = toTopicPartitionOffsetWatermarksKey(this.topic);
+    await this.redisClient.del(watermarkKey);
+    const partitions = await getPartitionsByTimestamp(this.kafka, this.topic, timestamp);
+    await seekToPartitions(this.consumer, partitions, this.topic);
   }
 
   // Used when this subscriber acts as the shared topic consumer (asTopicConsumer = true).
-  // Only seeks by timestamp when explicitly provided — crash recovery relies on committed offsets.
+  // If no timestamp is provided, default to 1 minute ago (same behavior as base Subscriber).
   async subscribeAsTopicConsumer(timestamp?: number): Promise<void> {
     if (!this.consumer || !this.kafka) {
       throw new Error('Kafka consumer is not initialized');
@@ -80,11 +106,8 @@ export class RedisSubscriber extends Subscriber {
       },
     });
 
-    if (timestamp == null) {
-      return;
-    }
-
-    const partitions = await getPartitionsByTimestamp(this.kafka, this.topic, timestamp);
+    const effectiveTimestamp = timestamp ?? this.get1MinuteAgoTimestamp();
+    const partitions = await getPartitionsByTimestamp(this.kafka, this.topic, effectiveTimestamp);
     await seekToPartitions(this.consumer, partitions, this.topic);
   }
 
