@@ -33,22 +33,15 @@ describe('ensureTopicConsumerRunning', () => {
     jest.clearAllMocks();
   });
 
-  it('starts consumer with lookback timestamp when no consumer exists', async () => {
-    const nowSpy = jest.spyOn(Date, 'now').mockReturnValue(1700000000000);
-    try {
-      const topic = nextTopic();
-      const mockRedisClient = { set: jest.fn().mockResolvedValue('OK') };
-      mockGetRedisClient.mockReturnValue(mockRedisClient as never);
+  it('starts consumer with no timestamp argument when no consumer exists', async () => {
+    const topic = nextTopic();
+    const mockRedisClient = { set: jest.fn().mockResolvedValue('OK') };
+    mockGetRedisClient.mockReturnValue(mockRedisClient as never);
 
-      await ensureTopicConsumerRunning({ brokers: ['kafka:9092'], topic }, subscribeOptions);
+    await ensureTopicConsumerRunning({ brokers: ['kafka:9092'], topic }, subscribeOptions);
 
-      expect(mockSubscribeAsTopicConsumer).toHaveBeenCalledTimes(1);
-      expect(mockSubscribeAsTopicConsumer).toHaveBeenCalledWith(
-        1700000000000 - TOPIC_CONSUMER_LOOKBACK_MS,
-      );
-    } finally {
-      nowSpy.mockRestore();
-    }
+    expect(mockSubscribeAsTopicConsumer).toHaveBeenCalledTimes(1);
+    expect(mockSubscribeAsTopicConsumer).toHaveBeenCalledWith();
   });
 
   describe('when consumer is already running', () => {
@@ -62,18 +55,21 @@ describe('ensureTopicConsumerRunning', () => {
 
     it('re-seeks with lookback timestamp when messages key is empty', async () => {
       const nowSpy = jest.spyOn(Date, 'now').mockReturnValue(1700000000000);
-      const topic = nextTopic();
-      const redisClient = await seedRunningConsumer(topic);
-      redisClient.lLen.mockResolvedValue(0);
-      mockGetRedisClient.mockReturnValue(redisClient as never);
+      try {
+        const topic = nextTopic();
+        const redisClient = await seedRunningConsumer(topic);
+        redisClient.lLen.mockResolvedValue(0);
+        mockGetRedisClient.mockReturnValue(redisClient as never);
 
-      await ensureTopicConsumerRunning({ brokers: ['kafka:9092'], topic }, subscribeOptions);
+        await ensureTopicConsumerRunning({ brokers: ['kafka:9092'], topic }, subscribeOptions);
 
-      expect(redisClient.lLen).toHaveBeenCalledWith(`kafka-relay:topics:${topic}:messages`);
-      expect(mockReseekToTimestamp).toHaveBeenCalledWith(
-        1700000000000 - TOPIC_CONSUMER_LOOKBACK_MS,
-      );
-      nowSpy.mockRestore();
+        expect(redisClient.lLen).toHaveBeenCalledWith(`kafka-relay:topics:${topic}:messages`);
+        expect(mockReseekToTimestamp).toHaveBeenCalledWith(
+          1700000000000 - TOPIC_CONSUMER_LOOKBACK_MS,
+        );
+      } finally {
+        nowSpy.mockRestore();
+      }
     });
 
     it('does not re-seek when messages key is non-empty', async () => {

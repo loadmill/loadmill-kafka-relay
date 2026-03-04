@@ -71,8 +71,7 @@ export const ensureTopicConsumerRunning = async (
         { asTopicConsumer: true },
       );
 
-      const lookbackTimestamp = getTopicConsumerLookbackTimestamp();
-      await entry.consumer.subscribeAsTopicConsumer(lookbackTimestamp);
+      await entry.consumer.subscribeAsTopicConsumer();
     })()
       .catch((error) => {
         log.error({ error, topic }, 'Failed starting topic consumer');
