@@ -13,6 +13,7 @@ import { RedisSubscriber } from '../redis-subscriber';
 
 type TopicEntry = {
   consumer?: RedisSubscriber;
+  consumerStartTimestamp?: number;
   renewIntervalId?: NodeJS.Timeout;
   startPromise?: Promise<void>;
 };
@@ -22,6 +23,7 @@ const topics = new Map<string, TopicEntry>();
 export const ensureTopicConsumerRunning = async (
   { brokers, topic }: SubscribeParams,
   { connectionTimeout, sasl, ssl }: SubscribeOptions,
+  timestamp?: number,
 ): Promise<void> => {
   // `startPromise` is treated as "start in progress" only.
   // It must not permanently short-circuit future leadership attempts.
@@ -35,9 +37,16 @@ export const ensureTopicConsumerRunning = async (
     }
 
     if (existing?.consumer) {
-      const count = await getRedisClient().lLen(toTopicMessagesKey(topic));
-      if (count === 0) {
-        await existing.consumer.reseekToTimestamp(getTopicConsumerLookbackTimestamp());
+      // If the subscriber needs data older than the consumer's current start, re-seek to cover it.
+      if (timestamp !== undefined && (existing.consumerStartTimestamp === undefined || timestamp < existing.consumerStartTimestamp)) {
+        existing.consumerStartTimestamp = timestamp;
+        await existing.consumer.reseekToTimestamp(timestamp);
+      } else {
+        const count = await getRedisClient().lLen(toTopicMessagesKey(topic));
+        if (count === 0) {
+          existing.consumerStartTimestamp = getTopicConsumerLookbackTimestamp();
+          await existing.consumer.reseekToTimestamp(existing.consumerStartTimestamp);
+        }
       }
       return;
     }
@@ -71,7 +80,11 @@ export const ensureTopicConsumerRunning = async (
         { asTopicConsumer: true },
       );
 
-      await entry.consumer.subscribeAsTopicConsumer();
+      const startTs = timestamp !== undefined && timestamp < getTopicConsumerLookbackTimestamp()
+        ? timestamp
+        : getTopicConsumerLookbackTimestamp();
+      entry.consumerStartTimestamp = startTs;
+      await entry.consumer.subscribeAsTopicConsumer(startTs);
     })()
       .catch((error) => {
         log.error({ error, topic }, 'Failed starting topic consumer');

@@ -185,6 +185,7 @@ export class RedisSubscribersManager extends SubscribersManager {
           sasl: localSubscriber.kafkaConfig.sasl,
           ssl: localSubscriber.kafkaConfig.ssl,
         },
+        localSubscriber.requestedStartTimestamp,
       );
       const allMessages = await getMessagesFromRedis(localSubscriber.topic);
       return allMessages.filter(
@@ -197,11 +198,12 @@ export class RedisSubscribersManager extends SubscribersManager {
       return [];
     }
 
-    const { kafkaConfig, topic } = redisSubscriber;
+    const { kafkaConfig, topic, requestedStartTimestamp } = redisSubscriber;
     const { brokers, connectionTimeout, sasl, ssl } = kafkaConfig;
     await ensureTopicConsumerRunning(
       { brokers, topic },
       { connectionTimeout, sasl, ssl },
+      requestedStartTimestamp,
     );
 
     const subscriber = await this.recreateSubscriberFromRedis(subscriberId, redisSubscriber.instanceId, true);

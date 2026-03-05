@@ -128,6 +128,7 @@ export class RedisSubscriber extends Subscriber {
         sasl: this.kafkaConfig.sasl,
         ssl: this.kafkaConfig.ssl,
       },
+      this.requestedStartTimestamp,
     );
   }
 

@@ -216,7 +216,7 @@ describe('RedisSubscriber.subscribe', () => {
     mockGetRedisClient.mockReturnValue({ del: jest.fn().mockResolvedValue(1) } as never);
   });
 
-  it('calls ensureTopicConsumerRunning with 2 arguments only', async () => {
+  it('passes requestedStartTimestamp to ensureTopicConsumerRunning', async () => {
     const subscriber = new RedisSubscriber({ brokers: ['kafka:9092'], topic: 'test-topic' }, {});
 
     await subscriber.subscribe();
@@ -225,6 +225,7 @@ describe('RedisSubscriber.subscribe', () => {
     expect(mockEnsureTopicConsumerRunning.mock.calls[0]).toEqual([
       { brokers: ['kafka:9092'], topic: 'test-topic' },
       { connectionTimeout: undefined, sasl: undefined, ssl: false },
+      subscriber.requestedStartTimestamp,
     ]);
   });
 });
