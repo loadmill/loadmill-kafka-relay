@@ -23,7 +23,6 @@ jest.mock('../../src/kafka/subscribers/redis-subscriber', () => {
     id: string;
     instanceId: string;
     kafkaConfig: { brokers: string[]; connectionTimeout?: number; sasl?: unknown; ssl: boolean };
-    requestedStartTimestamp: number;
     timeOfSubscription: number;
     topic: string;
     subscribe = jest.fn().mockResolvedValue(undefined);
@@ -33,14 +32,12 @@ jest.mock('../../src/kafka/subscribers/redis-subscriber', () => {
       { connectionTimeout, sasl, ssl = false }: { connectionTimeout?: number; sasl?: unknown; ssl?: boolean },
       options?: {
         debugParams?: { instanceId: string };
-        requestedStartTimestamp?: number;
         takeOverParams?: { id: string; timeOfSubscription: number };
       },
     ) {
       this.id = options?.takeOverParams?.id ?? `mock-subscriber-${idCounter++}`;
       this.instanceId = options?.debugParams?.instanceId ?? 'test-instance';
       this.kafkaConfig = { brokers, connectionTimeout, sasl, ssl };
-      this.requestedStartTimestamp = options?.requestedStartTimestamp ?? Date.now() - 60 * 1000;
       this.timeOfSubscription = options?.takeOverParams?.timeOfSubscription ?? Date.now();
       this.topic = topic;
     }
@@ -95,52 +92,7 @@ describe('RedisSubscribersManager', () => {
     jest.useRealTimers();
   });
 
-  it('add with explicit timestamp sets requestedStartTimestamp', async () => {
-    const { redisClient, redisSubscriberClient } = createRedisMocks();
-    mockGetRedisClient.mockReturnValue(redisClient as never);
-    mockGetRedisSubscriberClient.mockReturnValue(redisSubscriberClient as never);
-    const manager = new RedisSubscribersManager();
-
-    const subscriber = await manager.add(
-      { brokers: ['kafka:9092'], topic: 'test-topic' },
-      { connectionTimeout: undefined, sasl: undefined, ssl: false, timestamp: 12345 },
-    );
-
-    expect(subscriber.requestedStartTimestamp).toBe(12345);
-  });
-
-  it('add without timestamp defaults requestedStartTimestamp to one minute ago', async () => {
-    const nowSpy = jest.spyOn(Date, 'now').mockReturnValue(1700000000000);
-    const { redisClient, redisSubscriberClient } = createRedisMocks();
-    mockGetRedisClient.mockReturnValue(redisClient as never);
-    mockGetRedisSubscriberClient.mockReturnValue(redisSubscriberClient as never);
-    const manager = new RedisSubscribersManager();
-
-    const subscriber = await manager.add(
-      { brokers: ['kafka:9092'], topic: 'test-topic' },
-      { connectionTimeout: undefined, sasl: undefined, ssl: false },
-    );
-
-    expect(subscriber.requestedStartTimestamp).toBe(1699999940000);
-    nowSpy.mockRestore();
-  });
-
-  it('addSubscriberToRedis persists requestedStartTimestamp', async () => {
-    const { redisClient, redisSubscriberClient } = createRedisMocks();
-    mockGetRedisClient.mockReturnValue(redisClient as never);
-    mockGetRedisSubscriberClient.mockReturnValue(redisSubscriberClient as never);
-    const manager = new RedisSubscribersManager();
-
-    await manager.add(
-      { brokers: ['kafka:9092'], topic: 'test-topic' },
-      { connectionTimeout: undefined, sasl: undefined, ssl: false, timestamp: 555 },
-    );
-
-    const serialized = redisClient.set.mock.calls[0][1];
-    expect(JSON.parse(serialized).requestedStartTimestamp).toBe(555);
-  });
-
-  it('getMessages filters by requestedStartTimestamp for local subscribers', async () => {
+  it('getMessages returns all messages for local subscribers', async () => {
     const { redisClient, redisSubscriberClient } = createRedisMocks();
     mockGetRedisClient.mockReturnValue(redisClient as never);
     mockGetRedisSubscriberClient.mockReturnValue(redisSubscriberClient as never);
@@ -152,16 +104,16 @@ describe('RedisSubscribersManager', () => {
     const manager = new RedisSubscribersManager();
     const subscriber = await manager.add(
       { brokers: ['kafka:9092'], topic: 'test-topic' },
-      { connectionTimeout: undefined, sasl: undefined, ssl: false, timestamp: 200 },
+      { connectionTimeout: undefined, sasl: undefined, ssl: false },
     );
 
     const messages = await manager.getMessages(subscriber.id);
 
     expect(mockEnsureTopicConsumerRunning).toHaveBeenCalled();
-    expect(messages.map(m => Number(m.timestamp))).toEqual([200, 300]);
+    expect(messages.map(m => Number(m.timestamp))).toEqual([100, 200, 300]);
   });
 
-  it('getMessages filters by requestedStartTimestamp for cross-instance subscribers', async () => {
+  it('getMessages returns all messages for cross-instance subscribers', async () => {
     const { redisClient, redisSubscriberClient } = createRedisMocks();
     mockGetRedisClient.mockReturnValue(redisClient as never);
     mockGetRedisSubscriberClient.mockReturnValue(redisSubscriberClient as never);
@@ -174,23 +126,20 @@ describe('RedisSubscribersManager', () => {
       id: 'sub-remote',
       instanceId: 'remote-instance',
       kafkaConfig: { brokers: ['kafka:9092'], connectionTimeout: undefined, sasl: undefined, ssl: false },
-      requestedStartTimestamp: 200,
       timeOfSubscription: 1700000000000,
       topic: 'test-topic',
     });
     redisClient.keys.mockResolvedValue(['kafka-relay:remote-instance:subscribers:sub-remote']);
-    redisClient.get
-      .mockResolvedValueOnce(serializedSubscriber)
-      .mockResolvedValueOnce(serializedSubscriber);
+    redisClient.get.mockResolvedValueOnce(serializedSubscriber);
     const manager = new RedisSubscribersManager();
 
     const messages = await manager.getMessages('sub-remote');
 
     expect(mockEnsureTopicConsumerRunning).toHaveBeenCalled();
-    expect(messages.map(m => Number(m.timestamp))).toEqual([200, 300]);
+    expect(messages.map(m => Number(m.timestamp))).toEqual([100, 200, 300]);
   });
 
-  it('takeOverSubscribers subscribes without timestamp and keeps requestedStartTimestamp from redis', async () => {
+  it('takeOverSubscribers calls subscribe on each taken-over subscriber', async () => {
     const { redisClient, redisSubscriberClient } = createRedisMocks();
     const multiDel = jest.fn().mockReturnThis();
     const multiExec = jest.fn().mockResolvedValue([]);
@@ -201,7 +150,6 @@ describe('RedisSubscribersManager', () => {
       id: 'sub-takeover',
       instanceId: 'from-instance',
       kafkaConfig: { brokers: ['kafka:9092'], connectionTimeout: undefined, sasl: undefined, ssl: false },
-      requestedStartTimestamp: 300,
       timeOfSubscription: 1700000000000,
       topic: 'test-topic',
     });
@@ -212,34 +160,6 @@ describe('RedisSubscribersManager', () => {
     await manager.takeOverSubscribers('from-instance');
 
     const localSubscriber = manager.get('sub-takeover');
-    expect(localSubscriber.requestedStartTimestamp).toBe(300);
     expect(localSubscriber.subscribe).toHaveBeenCalledWith();
-  });
-
-  it('recreateSubscriberFromRedis restores requestedStartTimestamp', async () => {
-    const { redisClient, redisSubscriberClient } = createRedisMocks();
-    mockGetRedisClient.mockReturnValue(redisClient as never);
-    mockGetRedisSubscriberClient.mockReturnValue(redisSubscriberClient as never);
-    redisClient.get.mockResolvedValue(JSON.stringify({
-      id: 'sub-recreate',
-      instanceId: 'remote-instance',
-      kafkaConfig: { brokers: ['kafka:9092'], connectionTimeout: undefined, sasl: undefined, ssl: false },
-      requestedStartTimestamp: 777,
-      timeOfSubscription: 1700000000000,
-      topic: 'test-topic',
-    }));
-    const manager = new RedisSubscribersManager();
-
-    const subscriber = await (
-      manager as unknown as {
-        recreateSubscriberFromRedis: (
-          subscriberId: string,
-          relayInstanceId: string,
-          allowRemote: boolean,
-        ) => Promise<{ requestedStartTimestamp: number }>;
-      }
-    ).recreateSubscriberFromRedis('sub-recreate', 'remote-instance', true);
-
-    expect(subscriber.requestedStartTimestamp).toBe(777);
   });
 });

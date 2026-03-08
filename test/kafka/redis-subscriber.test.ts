@@ -12,34 +12,6 @@ jest.mock('../../src/kafka/schema-registry', () => ({ decode: jest.fn().mockReso
 const mockGetRedisClient = getRedisClient as jest.MockedFunction<typeof getRedisClient>;
 const mockEnsureTopicConsumerRunning = ensureTopicConsumerRunning as jest.MockedFunction<typeof ensureTopicConsumerRunning>;
 
-describe('RedisSubscriber.requestedStartTimestamp', () => {
-  const subscribeParams = { brokers: ['kafka:9092'], topic: 'test-topic' };
-
-  beforeEach(() => {
-    jest.clearAllMocks();
-    mockGetRedisClient.mockReturnValue({ del: jest.fn().mockResolvedValue(1) } as never);
-  });
-
-  it('is set from options when provided', () => {
-    const subscriber = new RedisSubscriber(
-      subscribeParams,
-      {},
-      { requestedStartTimestamp: 12345 },
-    );
-    expect(subscriber.requestedStartTimestamp).toBe(12345);
-  });
-
-  it('defaults to one minute ago when not provided', () => {
-    const nowSpy = jest.spyOn(Date, 'now').mockReturnValue(1700000000000);
-    try {
-      const subscriber = new RedisSubscriber(subscribeParams, {});
-      expect(subscriber.requestedStartTimestamp).toBe(1699999940000);
-    } finally {
-      nowSpy.mockRestore();
-    }
-  });
-});
-
 describe('RedisSubscriber.reseekToLatestMessages', () => {
   const subscribeParams = { brokers: ['kafka:9092'], topic: 'test-topic' };
   const watermarkKey = 'kafka-relay:topics:test-topic:partition-offset-watermarks';
@@ -236,15 +208,15 @@ describe('RedisSubscriber.subscribe', () => {
     mockGetRedisClient.mockReturnValue({ del: jest.fn().mockResolvedValue(1) } as never);
   });
 
-  it('calls ensureTopicConsumerRunning with two arguments', async () => {
+  it('calls ensureTopicConsumerRunning with brokers and options', async () => {
     const subscriber = new RedisSubscriber({ brokers: ['kafka:9092'], topic: 'test-topic' }, {});
 
     await subscriber.subscribe();
 
     expect(mockEnsureTopicConsumerRunning).toHaveBeenCalledTimes(1);
-    expect(mockEnsureTopicConsumerRunning.mock.calls[0]).toEqual([
+    expect(mockEnsureTopicConsumerRunning).toHaveBeenCalledWith(
       { brokers: ['kafka:9092'], topic: 'test-topic' },
       { connectionTimeout: undefined, sasl: undefined, ssl: false },
-    ]);
+    );
   });
 });

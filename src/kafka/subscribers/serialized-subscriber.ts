@@ -6,7 +6,6 @@ export type SerializedRedisSubscriber = Pick<RedisSubscriber,
   'id' |
   'instanceId' |
   'kafkaConfig' |
-  'requestedStartTimestamp' |
   'timeOfSubscription' |
   'topic'
   > & {

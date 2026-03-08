@@ -33,14 +33,12 @@ import { toTopicGroupId } from './topic-utils';
 export type RedisSubscriberOptions = {
   asTopicConsumer?: boolean;
   debugParams?: { instanceId: string };
-  requestedStartTimestamp?: number;
   takeOverParams?: TakeOverParams;
 };
 
 export class RedisSubscriber extends Subscriber {
   private redisClient: RedisClient = getRedisClient();
   readonly instanceId: string = thisRelayInstanceId;
-  readonly requestedStartTimestamp: number;
 
   constructor(
     subscribeParams: SubscribeParams,
@@ -52,7 +50,6 @@ export class RedisSubscriber extends Subscriber {
     super(subscribeParams, subscribeOptions, takeOverParams?.id, groupId, asTopicConsumer);
     takeOverParams && (this.timeOfSubscription = takeOverParams.timeOfSubscription);
     debugParams && (this.instanceId = debugParams.instanceId);
-    this.requestedStartTimestamp = options?.requestedStartTimestamp ?? get1MinuteAgoTimestamp();
   }
 
   async addMessage({ message, partition }: EachMessagePayload): Promise<void> {
@@ -170,5 +167,3 @@ const seekToPartitions = async (consumer: Consumer, partitions: PartitionOffset[
     ),
   );
 };
-
-const get1MinuteAgoTimestamp = (): number => Date.now() - 60 * 1000;
