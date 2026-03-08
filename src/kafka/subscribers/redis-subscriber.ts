@@ -74,6 +74,7 @@ export class RedisSubscriber extends Subscriber {
       partition,
       redisClient: this.redisClient,
       serializedMessage,
+      timestamp: Number(message.timestamp),
       ttlSeconds: TOPIC_MESSAGES_TTL_SECONDS,
       watermarkKey,
     });
@@ -152,10 +153,8 @@ const getSeekOffsets = async (
   await admin.connect();
   const offsets = await admin.fetchTopicOffsets(topic);
   await admin.disconnect();
-  const numPartitions = offsets.length || 1;
-  const messagesPerPartition = Math.ceil(MAX_TOPIC_MESSAGES_LENGTH / numPartitions);
   return offsets.map(({ partition, high, low }) => ({
-    offset: String(Math.max(Number(low), Number(high) - messagesPerPartition)),
+    offset: String(Math.max(Number(low), Number(high) - MAX_TOPIC_MESSAGES_LENGTH)),
     partition,
   }));
 };

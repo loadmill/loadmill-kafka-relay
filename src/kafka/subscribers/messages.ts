@@ -34,7 +34,7 @@ export const normalizeConsumedMessageValue = (value: ConsumedMessage['value']): 
 };
 
 export const getMessagesFromRedis = async (topic: string): Promise<ConsumedMessage[]> => {
-  const serializedMessages = await getRedisClient().lRange(toTopicMessagesKey(topic), 0, -1);
+  const serializedMessages = await getRedisClient().zRange(toTopicMessagesKey(topic), 0, -1);
   const messages = serializedMessages.map(
     (serializedMessageObject: string) => {
       const message = JSON.parse(serializedMessageObject) as ConsumedMessage;

@@ -43,7 +43,7 @@ describe('ensureTopicConsumerRunning', () => {
 
   describe('when consumer is already running', () => {
     const seedRunningConsumer = async (topic: string) => {
-      const mockRedisClient = { lLen: jest.fn().mockResolvedValue(1), set: jest.fn().mockResolvedValue('OK') };
+      const mockRedisClient = { set: jest.fn().mockResolvedValue('OK'), zCard: jest.fn().mockResolvedValue(1) };
       mockGetRedisClient.mockReturnValue(mockRedisClient as never);
       await ensureTopicConsumerRunning({ brokers: ['kafka:9092'], topic }, subscribeOptions);
       jest.clearAllMocks();
@@ -53,19 +53,19 @@ describe('ensureTopicConsumerRunning', () => {
     it('re-seeks with lookback timestamp when messages key is empty', async () => {
       const topic = nextTopic();
       const redisClient = await seedRunningConsumer(topic);
-      redisClient.lLen.mockResolvedValue(0);
+      redisClient.zCard.mockResolvedValue(0);
       mockGetRedisClient.mockReturnValue(redisClient as never);
 
       await ensureTopicConsumerRunning({ brokers: ['kafka:9092'], topic }, subscribeOptions);
 
-      expect(redisClient.lLen).toHaveBeenCalledWith(`kafka-relay:topics:${topic}:messages`);
+      expect(redisClient.zCard).toHaveBeenCalledWith(`kafka-relay:topics:${topic}:messages`);
       expect(mockReseekToLatestMessages).toHaveBeenCalledTimes(1);
     });
 
     it('does not re-seek when messages key is non-empty', async () => {
       const topic = nextTopic();
       const redisClient = await seedRunningConsumer(topic);
-      redisClient.lLen.mockResolvedValue(5);
+      redisClient.zCard.mockResolvedValue(5);
       mockGetRedisClient.mockReturnValue(redisClient as never);
 
       await ensureTopicConsumerRunning({ brokers: ['kafka:9092'], topic }, subscribeOptions);
@@ -80,7 +80,7 @@ describe('ensureTopicConsumerRunning', () => {
 
       await ensureTopicConsumerRunning({ brokers: ['kafka:9092'], topic }, subscribeOptions);
 
-      expect(redisClient.lLen).toHaveBeenCalledTimes(1);
+      expect(redisClient.zCard).toHaveBeenCalledTimes(1);
       expect(mockReseekToLatestMessages).not.toHaveBeenCalled();
     });
   });

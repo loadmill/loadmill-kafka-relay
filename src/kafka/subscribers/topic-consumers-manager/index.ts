@@ -34,7 +34,7 @@ export const ensureTopicConsumerRunning = async (
     }
 
     if (existing?.consumer) {
-      const count = await getRedisClient().lLen(toTopicMessagesKey(topic));
+      const count = await getRedisClient().zCard(toTopicMessagesKey(topic));
       if (count === 0) {
         await existing.consumer.reseekToLatestMessages();
       }
