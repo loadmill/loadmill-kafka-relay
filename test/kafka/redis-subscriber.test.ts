@@ -1,4 +1,3 @@
-import { TOPIC_CONSUMER_LOOKBACK_MS } from '../../src/kafka/subscribers/constants';
 import { RedisSubscriber } from '../../src/kafka/subscribers/redis-subscriber';
 import { ensureTopicConsumerRunning } from '../../src/kafka/subscribers/topic-consumers-manager';
 import { getRedisClient } from '../../src/redis/redis-client';
@@ -41,17 +40,17 @@ describe('RedisSubscriber.requestedStartTimestamp', () => {
   });
 });
 
-describe('RedisSubscriber.reseekToTimestamp', () => {
+describe('RedisSubscriber.reseekToLatestMessages', () => {
   const subscribeParams = { brokers: ['kafka:9092'], topic: 'test-topic' };
   const watermarkKey = 'kafka-relay:topics:test-topic:partition-offset-watermarks';
 
   const makeConsumer = () => ({ seek: jest.fn() });
 
-  const makeKafka = (partitions: { offset: string; partition: number }[]) => {
+  const makeKafka = (partitions: { high: string; low: string; offset: string; partition: number }[]) => {
     const admin = {
       connect: jest.fn().mockResolvedValue(undefined),
       disconnect: jest.fn().mockResolvedValue(undefined),
-      fetchTopicOffsetsByTimestamp: jest.fn().mockResolvedValue(partitions),
+      fetchTopicOffsets: jest.fn().mockResolvedValue(partitions),
     };
     return { _admin: admin, admin: jest.fn().mockReturnValue(admin) };
   };
@@ -60,14 +59,12 @@ describe('RedisSubscriber.reseekToTimestamp', () => {
 
   const createSubscriber = (redisClient: ReturnType<typeof makeRedisClient>) => {
     mockGetRedisClient.mockReturnValue(redisClient as never);
-    // asTopicConsumer defaults to false → consumer and kafka are left undefined
     return new RedisSubscriber(subscribeParams, {});
   };
 
   it('throws when consumer is not initialized', async () => {
     const subscriber = createSubscriber(makeRedisClient());
-    // kafka is also undefined, but the guard checks both together
-    await expect(subscriber.reseekToTimestamp(12345)).rejects.toThrow(
+    await expect(subscriber.reseekToLatestMessages()).rejects.toThrow(
       'Kafka consumer is not initialized',
     );
   });
@@ -75,8 +72,7 @@ describe('RedisSubscriber.reseekToTimestamp', () => {
   it('throws when kafka is not initialized', async () => {
     const subscriber = createSubscriber(makeRedisClient());
     subscriber.consumer = makeConsumer() as never;
-    // kafka is still undefined
-    await expect(subscriber.reseekToTimestamp(12345)).rejects.toThrow(
+    await expect(subscriber.reseekToLatestMessages()).rejects.toThrow(
       'Kafka consumer is not initialized',
     );
   });
@@ -94,14 +90,13 @@ describe('RedisSubscriber.reseekToTimestamp', () => {
         callOrder.push('seek');
       }),
     };
-    const { _admin: admin, admin: kafkaAdmin } = makeKafka([{ offset: '5', partition: 0 }]);
-    admin.fetchTopicOffsetsByTimestamp.mockResolvedValue([{ offset: '5', partition: 0 }]);
+    const { admin: kafkaAdmin } = makeKafka([{ high: '5', low: '0', offset: '0', partition: 0 }]);
 
     const subscriber = createSubscriber(redisClient as never);
     subscriber.consumer = consumer as never;
     subscriber.kafka = { admin: kafkaAdmin } as never;
 
-    await subscriber.reseekToTimestamp(1000);
+    await subscriber.reseekToLatestMessages();
 
     expect(callOrder[0]).toBe('del');
     expect(callOrder).toContain('seek');
@@ -112,9 +107,9 @@ describe('RedisSubscriber.reseekToTimestamp', () => {
     const redisClient = makeRedisClient();
     const consumer = makeConsumer();
     const partitions = [
-      { offset: '10', partition: 0 },
-      { offset: '20', partition: 1 },
-      { offset: '30', partition: 2 },
+      { high: '10', low: '0', offset: '0', partition: 0 },
+      { high: '20', low: '0', offset: '0', partition: 1 },
+      { high: '30', low: '0', offset: '0', partition: 2 },
     ];
     const { _admin: admin, admin: kafkaAdmin } = makeKafka(partitions);
 
@@ -122,24 +117,24 @@ describe('RedisSubscriber.reseekToTimestamp', () => {
     subscriber.consumer = consumer as never;
     subscriber.kafka = { admin: kafkaAdmin } as never;
 
-    await subscriber.reseekToTimestamp(99999);
+    await subscriber.reseekToLatestMessages();
 
-    expect(admin.fetchTopicOffsetsByTimestamp).toHaveBeenCalledWith('test-topic', 99999);
+    expect(admin.fetchTopicOffsets).toHaveBeenCalledWith('test-topic');
     expect(consumer.seek).toHaveBeenCalledTimes(3);
-    expect(consumer.seek).toHaveBeenCalledWith({ offset: '10', partition: 0, topic: 'test-topic' });
-    expect(consumer.seek).toHaveBeenCalledWith({ offset: '20', partition: 1, topic: 'test-topic' });
-    expect(consumer.seek).toHaveBeenCalledWith({ offset: '30', partition: 2, topic: 'test-topic' });
+    expect(consumer.seek).toHaveBeenCalledWith({ offset: '0', partition: 0, topic: 'test-topic' });
+    expect(consumer.seek).toHaveBeenCalledWith({ offset: '0', partition: 1, topic: 'test-topic' });
+    expect(consumer.seek).toHaveBeenCalledWith({ offset: '0', partition: 2, topic: 'test-topic' });
   });
 
   it('deletes watermark for the correct topic key', async () => {
     const redisClient = makeRedisClient();
-    const { admin: kafkaAdmin } = makeKafka([{ offset: '0', partition: 0 }]);
+    const { admin: kafkaAdmin } = makeKafka([{ high: '1', low: '0', offset: '0', partition: 0 }]);
 
     const subscriber = createSubscriber(redisClient as never);
     subscriber.consumer = makeConsumer() as never;
     subscriber.kafka = { admin: kafkaAdmin } as never;
 
-    await subscriber.reseekToTimestamp(1000);
+    await subscriber.reseekToLatestMessages();
 
     expect(redisClient.del).toHaveBeenCalledTimes(1);
     expect(redisClient.del).toHaveBeenCalledWith(watermarkKey);
@@ -149,11 +144,11 @@ describe('RedisSubscriber.reseekToTimestamp', () => {
 describe('RedisSubscriber.subscribeAsTopicConsumer', () => {
   const subscribeParams = { brokers: ['kafka:9092'], topic: 'test-topic' };
 
-  const makeKafka = (partitions: { offset: string; partition: number }[]) => {
+  const makeKafka = (partitions: { high: string; low: string; offset: string; partition: number }[]) => {
     const admin = {
       connect: jest.fn().mockResolvedValue(undefined),
       disconnect: jest.fn().mockResolvedValue(undefined),
-      fetchTopicOffsetsByTimestamp: jest.fn().mockResolvedValue(partitions),
+      fetchTopicOffsets: jest.fn().mockResolvedValue(partitions),
     };
     return { _admin: admin, admin: jest.fn().mockReturnValue(admin) };
   };
@@ -165,48 +160,73 @@ describe('RedisSubscriber.subscribeAsTopicConsumer', () => {
     return new RedisSubscriber(subscribeParams, {});
   };
 
-  it('seeks from lookback when timestamp is not provided', async () => {
-    const nowSpy = jest.spyOn(Date, 'now').mockReturnValue(1700000000000);
-    try {
-      const consumer = {
-        connect: jest.fn().mockResolvedValue(undefined),
-        run: jest.fn().mockResolvedValue(undefined),
-        seek: jest.fn(),
-        subscribe: jest.fn().mockResolvedValue(undefined),
-      };
-      const { _admin: admin, admin: kafkaAdmin } = makeKafka([{ offset: '5', partition: 0 }]);
-      const subscriber = createSubscriber();
-      subscriber.consumer = consumer as never;
-      subscriber.kafka = { admin: kafkaAdmin } as never;
-
-      await subscriber.subscribeAsTopicConsumer(undefined);
-
-      expect(admin.fetchTopicOffsetsByTimestamp).toHaveBeenCalledWith(
-        'test-topic',
-        1700000000000 - TOPIC_CONSUMER_LOOKBACK_MS,
-      );
-      expect(consumer.seek).toHaveBeenCalledWith({ offset: '5', partition: 0, topic: 'test-topic' });
-    } finally {
-      nowSpy.mockRestore();
-    }
-  });
-
-  it('uses explicit timestamp when provided', async () => {
+  it('computes seek offset from high/low', async () => {
+    const callOrder: string[] = [];
     const consumer = {
-      connect: jest.fn().mockResolvedValue(undefined),
-      run: jest.fn().mockResolvedValue(undefined),
-      seek: jest.fn(),
-      subscribe: jest.fn().mockResolvedValue(undefined),
+      connect: jest.fn().mockImplementation(async () => {
+        callOrder.push('connect');
+      }),
+      run: jest.fn().mockImplementation(async () => {
+        callOrder.push('run');
+      }),
+      seek: jest.fn().mockImplementation(() => {
+        callOrder.push('seek');
+      }),
+      subscribe: jest.fn().mockImplementation(async () => {
+        callOrder.push('subscribe');
+      }),
     };
-    const { _admin: admin, admin: kafkaAdmin } = makeKafka([{ offset: '7', partition: 1 }]);
+    const { _admin: admin, admin: kafkaAdmin } = makeKafka([
+      { high: '5010', low: '0', offset: '0', partition: 0 },
+    ]);
+    admin.fetchTopicOffsets.mockImplementation(async () => {
+      callOrder.push('fetchTopicOffsets');
+      return [{ high: '5010', low: '0', offset: '0', partition: 0 }];
+    });
+
     const subscriber = createSubscriber();
     subscriber.consumer = consumer as never;
     subscriber.kafka = { admin: kafkaAdmin } as never;
 
-    await subscriber.subscribeAsTopicConsumer(1234567890000);
+    await subscriber.subscribeAsTopicConsumer();
 
-    expect(admin.fetchTopicOffsetsByTimestamp).toHaveBeenCalledWith('test-topic', 1234567890000);
-    expect(consumer.seek).toHaveBeenCalledWith({ offset: '7', partition: 1, topic: 'test-topic' });
+    expect(consumer.seek).toHaveBeenCalledWith({ offset: '10', partition: 0, topic: 'test-topic' });
+    expect(admin.fetchTopicOffsets).toHaveBeenCalledWith('test-topic');
+    expect(callOrder).toEqual(['connect', 'fetchTopicOffsets', 'subscribe', 'run', 'seek']);
+  });
+
+  it('clamps to low when topic has fewer than 5000 messages', async () => {
+    const callOrder: string[] = [];
+    const consumer = {
+      connect: jest.fn().mockImplementation(async () => {
+        callOrder.push('connect');
+      }),
+      run: jest.fn().mockImplementation(async () => {
+        callOrder.push('run');
+      }),
+      seek: jest.fn().mockImplementation(() => {
+        callOrder.push('seek');
+      }),
+      subscribe: jest.fn().mockImplementation(async () => {
+        callOrder.push('subscribe');
+      }),
+    };
+    const { _admin: admin, admin: kafkaAdmin } = makeKafka([
+      { high: '100', low: '0', offset: '0', partition: 0 },
+    ]);
+    admin.fetchTopicOffsets.mockImplementation(async () => {
+      callOrder.push('fetchTopicOffsets');
+      return [{ high: '100', low: '0', offset: '0', partition: 0 }];
+    });
+
+    const subscriber = createSubscriber();
+    subscriber.consumer = consumer as never;
+    subscriber.kafka = { admin: kafkaAdmin } as never;
+
+    await subscriber.subscribeAsTopicConsumer();
+
+    expect(consumer.seek).toHaveBeenCalledWith({ offset: '0', partition: 0, topic: 'test-topic' });
+    expect(callOrder).toEqual(['connect', 'fetchTopicOffsets', 'subscribe', 'run', 'seek']);
   });
 });
 
@@ -216,7 +236,7 @@ describe('RedisSubscriber.subscribe', () => {
     mockGetRedisClient.mockReturnValue({ del: jest.fn().mockResolvedValue(1) } as never);
   });
 
-  it('passes requestedStartTimestamp to ensureTopicConsumerRunning', async () => {
+  it('calls ensureTopicConsumerRunning with two arguments', async () => {
     const subscriber = new RedisSubscriber({ brokers: ['kafka:9092'], topic: 'test-topic' }, {});
 
     await subscriber.subscribe();
@@ -225,7 +245,6 @@ describe('RedisSubscriber.subscribe', () => {
     expect(mockEnsureTopicConsumerRunning.mock.calls[0]).toEqual([
       { brokers: ['kafka:9092'], topic: 'test-topic' },
       { connectionTimeout: undefined, sasl: undefined, ssl: false },
-      subscriber.requestedStartTimestamp,
     ]);
   });
 });

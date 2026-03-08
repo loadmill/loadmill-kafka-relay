@@ -13,7 +13,6 @@ import { ConsumedMessage, SubscribeOptions, SubscribeParams } from '../../types'
 import { KafkaType } from '../../types/kafkajs-confluent';
 
 import {
-  getTopicConsumerLookbackTimestamp,
   MAX_TOPIC_MESSAGES_LENGTH,
   TOPIC_MESSAGES_TTL_SECONDS,
 } from './constants';
@@ -86,35 +85,32 @@ export class RedisSubscriber extends Subscriber {
     }
   }
 
-  // Re-seeks a running topic consumer to a past timestamp and resets the
+  // Re-seeks a running topic consumer to latest messages and resets the
   // deduplication watermark so replayed messages are not silently dropped.
-  async reseekToTimestamp(timestamp: number): Promise<void> {
+  async reseekToLatestMessages(): Promise<void> {
     if (!this.consumer || !this.kafka) {
       throw new Error('Kafka consumer is not initialized');
     }
     const watermarkKey = toTopicPartitionOffsetWatermarksKey(this.topic);
     await this.redisClient.del(watermarkKey);
-    const partitions = await getPartitionsByTimestamp(this.kafka, this.topic, timestamp);
+    const partitions = await getSeekOffsets(this.kafka, this.topic);
     await seekToPartitions(this.consumer, partitions, this.topic);
   }
 
   // Used when this subscriber acts as the shared topic consumer (asTopicConsumer = true).
-  // If no timestamp is provided, default to topic-consumer lookback.
-  async subscribeAsTopicConsumer(timestamp?: number): Promise<void> {
+  async subscribeAsTopicConsumer(): Promise<void> {
     if (!this.consumer || !this.kafka) {
       throw new Error('Kafka consumer is not initialized');
     }
 
     await this.consumer.connect();
+    const partitions = await getSeekOffsets(this.kafka, this.topic);
     await this.consumer.subscribe({ topic: this.topic });
     await this.consumer.run({
       eachMessage: async (payload) => {
         await this.addMessage(payload);
       },
     });
-
-    const effectiveTimestamp = timestamp ?? getTopicConsumerLookbackTimestamp();
-    const partitions = await getPartitionsByTimestamp(this.kafka, this.topic, effectiveTimestamp);
     await seekToPartitions(this.consumer, partitions, this.topic);
   }
 
@@ -128,7 +124,6 @@ export class RedisSubscriber extends Subscriber {
         sasl: this.kafkaConfig.sasl,
         ssl: this.kafkaConfig.ssl,
       },
-      this.requestedStartTimestamp,
     );
   }
 
@@ -152,16 +147,20 @@ export type ShallowRedisSubscribers = {
 
 export type ShallowRedisSubscriber = ShallowSubscriber & Pick<RedisSubscriber, 'instanceId'>;
 
-const getPartitionsByTimestamp = async (
+const getSeekOffsets = async (
   kafka: NonNullable<KafkaType>,
   topic: string,
-  timestamp: number,
 ): Promise<PartitionOffset[]> => {
   const admin = kafka.admin();
   await admin.connect();
-  const partitions = await admin.fetchTopicOffsetsByTimestamp(topic, timestamp);
+  const offsets = await admin.fetchTopicOffsets(topic);
   await admin.disconnect();
-  return partitions;
+  const numPartitions = offsets.length || 1;
+  const messagesPerPartition = Math.ceil(MAX_TOPIC_MESSAGES_LENGTH / numPartitions);
+  return offsets.map(({ partition, high, low }) => ({
+    offset: String(Math.max(Number(low), Number(high) - messagesPerPartition)),
+    partition,
+  }));
 };
 
 const seekToPartitions = async (consumer: Consumer, partitions: PartitionOffset[], topic: string) => {
