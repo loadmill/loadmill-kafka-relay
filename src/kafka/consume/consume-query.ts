@@ -1,6 +1,5 @@
 import isEmpty from 'lodash/isEmpty';
 
-import log from '../../log';
 import {
   ConsumedMessage,
   ConsumeQueryOptions,
@@ -21,8 +20,6 @@ export const filterMessages = (
   messages: ConsumedMessage[],
   options: ConsumeQueryOptions,
 ): ConsumedMessage[] => {
-  log.debug({ messages }, 'Filtering messages by regex');
-
   return messages.filter((message) => isMessageMatchesConsumeFilters(message, options));
 };
 

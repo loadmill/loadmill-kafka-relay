@@ -22,7 +22,6 @@ export const getMessagesFromRedis = async (
   topic: string,
   options?: ConsumeQueryOptions,
 ): Promise<ConsumedMessage[]> => {
-  log.debug({ options, topic }, 'In getMessagesFromRedis');
   const messagesKey = toTopicMessagesKey(topic);
   const { headerRegex, multiple, valueRegex } = options ?? {};
   const maxMessages = Math.max(1, Number(multiple) || 1);
