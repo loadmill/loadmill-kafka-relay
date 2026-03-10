@@ -9,7 +9,7 @@ import { isMessageMatchesConsumeFilters } from '../consume/consume-query';
 
 import { toTopicMessagesKey } from './redis-keys';
 
-const REDIS_SCAN_BATCH_SIZE = 100;
+const REDIS_SCAN_BATCH_SIZE = Number(process.env.REDIS_SCAN_BATCH_SIZE) || 100;
 
 /**
  * Redis sorted set stores topic messages ordered by timestamp.
@@ -95,7 +95,7 @@ const _collectMatchingMessagesInReverse = (
           serializedLength: serialized.length,
         },
       );
-      return;
+      continue;
     }
 
     const message = _parseSerializedMessage(serialized);
