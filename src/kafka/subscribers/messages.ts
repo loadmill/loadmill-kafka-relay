@@ -1,10 +1,7 @@
 import { KafkaMessage } from '@confluentinc/kafka-javascript/types/kafkajs';
 
-import { getRedisClient } from '../../redis/redis-client';
 import { ConsumedMessage } from '../../types';
 import { decode } from '../schema-registry';
-
-import { toTopicMessagesKey } from './redis-keys';
 
 export const fromKafkaToConsumedMessage = async (message: KafkaMessage): Promise<ConsumedMessage> => {
   const decodedValue = await decode(message.value as Buffer);
@@ -30,18 +27,4 @@ export const normalizeConsumedMessageValue = (value: ConsumedMessage['value']): 
   return typeof value === 'string' ?
     value :
     JSON.parse(value.toString());
-};
-
-export const getMessagesFromRedis = async (topic: string): Promise<ConsumedMessage[]> => {
-  const serializedMessages = await getRedisClient().zRange(toTopicMessagesKey(topic), 0, -1);
-  const messages = serializedMessages.map(
-    (serializedMessageObject: string) => {
-      const message = JSON.parse(serializedMessageObject) as ConsumedMessage;
-      if (message.value && typeof message.value !== 'string') {
-        message.value = JSON.stringify(message.value);
-      }
-      return message;
-    },
-  );
-  return messages;
 };

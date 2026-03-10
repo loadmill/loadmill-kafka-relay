@@ -18,13 +18,13 @@ import {
 } from './constants';
 import {
   fromKafkaToConsumedMessage,
-  getMessagesFromRedis,
   normalizeConsumedMessageValue,
 } from './messages';
 import {
   toTopicMessagesKey,
   toTopicPartitionOffsetWatermarksKey,
 } from './redis-keys';
+import { getMessagesFromRedis } from './redis-messages';
 import { appendTopicMessageWithDedupe } from './redis-topic-dedupe';
 import { ShallowSubscriber, Subscriber } from './subscriber';
 import { ensureTopicConsumerRunning } from './topic-consumers-manager';
