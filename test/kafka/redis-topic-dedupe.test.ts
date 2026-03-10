@@ -50,6 +50,7 @@ describe('redis topic dedupe offset comparisons', () => {
       offset: '29123',
       partition: 0,
       serializedMessage: '{"offset":"29123","partition":0}',
+      timestamp: 1700000000000,
       ttlSeconds: 600,
       watermarkKey: 'kafka-relay:topics:test-topic:partition-offset-watermarks',
     };
@@ -58,8 +59,8 @@ describe('redis topic dedupe offset comparisons', () => {
       exec: jest.Mock<Promise<unknown[]>, []>;
       expire: jest.Mock<MockTxn, [string, number]>;
       hSet: jest.Mock<MockTxn, [string, string, string]>;
-      lTrim: jest.Mock<MockTxn, [string, number, number]>;
-      rPush: jest.Mock<MockTxn, [string, string]>;
+      zAdd: jest.Mock<MockTxn, [string, { score: number; value: string }]>;
+      zRemRangeByRank: jest.Mock<MockTxn, [string, number, number]>;
     };
 
     const createTxn = (): MockTxn => {
@@ -67,11 +68,11 @@ describe('redis topic dedupe offset comparisons', () => {
         exec: jest.fn<Promise<unknown[]>, []>().mockResolvedValue(['OK']),
         expire: jest.fn<MockTxn, [string, number]>(),
         hSet: jest.fn<MockTxn, [string, string, string]>(),
-        lTrim: jest.fn<MockTxn, [string, number, number]>(),
-        rPush: jest.fn<MockTxn, [string, string]>(),
+        zAdd: jest.fn<MockTxn, [string, { score: number; value: string }]>(),
+        zRemRangeByRank: jest.fn<MockTxn, [string, number, number]>(),
       };
-      txn.rPush.mockReturnValue(txn);
-      txn.lTrim.mockReturnValue(txn);
+      txn.zAdd.mockReturnValue(txn);
+      txn.zRemRangeByRank.mockReturnValue(txn);
       txn.hSet.mockReturnValue(txn);
       txn.expire.mockReturnValue(txn);
       return txn;
@@ -107,8 +108,8 @@ describe('redis topic dedupe offset comparisons', () => {
 
       expect(result).toBe('inserted');
       expect(hGet).toHaveBeenCalledWith(baseParams.watermarkKey, '0');
-      expect(txn.rPush).toHaveBeenCalledWith(baseParams.messagesKey, baseParams.serializedMessage);
-      expect(txn.lTrim).toHaveBeenCalledWith(baseParams.messagesKey, -baseParams.maxMessages, -1);
+      expect(txn.zAdd).toHaveBeenCalledWith(baseParams.messagesKey, { score: baseParams.timestamp, value: baseParams.serializedMessage });
+      expect(txn.zRemRangeByRank).toHaveBeenCalledWith(baseParams.messagesKey, 0, -(baseParams.maxMessages + 1));
       expect(txn.hSet).toHaveBeenCalledWith(baseParams.watermarkKey, '0', baseParams.offset);
       expect(txn.expire).toHaveBeenNthCalledWith(1, baseParams.messagesKey, baseParams.ttlSeconds);
       expect(txn.expire).toHaveBeenNthCalledWith(2, baseParams.watermarkKey, baseParams.ttlSeconds);

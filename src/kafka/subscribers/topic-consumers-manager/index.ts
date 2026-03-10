@@ -21,7 +21,6 @@ const topics = new Map<string, TopicEntry>();
 export const ensureTopicConsumerRunning = async (
   { brokers, topic }: SubscribeParams,
   { connectionTimeout, sasl, ssl }: SubscribeOptions,
-  timestamp?: number,
 ): Promise<void> => {
   // `startPromise` is treated as "start in progress" only.
   // It must not permanently short-circuit future leadership attempts.
@@ -35,11 +34,9 @@ export const ensureTopicConsumerRunning = async (
     }
 
     if (existing?.consumer) {
-      if (timestamp != null) {
-        const count = await getRedisClient().lLen(toTopicMessagesKey(topic));
-        if (count === 0) {
-          await existing.consumer.reseekToTimestamp(timestamp);
-        }
+      const count = await getRedisClient().zCard(toTopicMessagesKey(topic));
+      if (count === 0) {
+        await existing.consumer.reseekToLatestMessages();
       }
       return;
     }
@@ -73,7 +70,7 @@ export const ensureTopicConsumerRunning = async (
         { asTopicConsumer: true },
       );
 
-      await entry.consumer.subscribeAsTopicConsumer(timestamp);
+      await entry.consumer.subscribeAsTopicConsumer();
     })()
       .catch((error) => {
         log.error({ error, topic }, 'Failed starting topic consumer');

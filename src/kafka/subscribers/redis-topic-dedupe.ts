@@ -9,6 +9,7 @@ type AppendTopicMessageParams = {
   partition: number;
   redisClient: RedisClient;
   serializedMessage: string;
+  timestamp: number;
   ttlSeconds: number;
   watermarkKey: string;
 };
@@ -21,6 +22,7 @@ export const appendTopicMessageWithDedupe = async (
     partition,
     redisClient,
     serializedMessage,
+    timestamp,
     ttlSeconds,
     watermarkKey,
   }: AppendTopicMessageParams,
@@ -33,8 +35,8 @@ export const appendTopicMessageWithDedupe = async (
   }
 
   await redisClient.multi()
-    .rPush(messagesKey, serializedMessage)
-    .lTrim(messagesKey, -maxMessages, -1)
+    .zAdd(messagesKey, { score: timestamp, value: serializedMessage })
+    .zRemRangeByRank(messagesKey, 0, -(maxMessages + 1))
     .hSet(watermarkKey, partitionField, offset)
     .expire(messagesKey, ttlSeconds)
     .expire(watermarkKey, ttlSeconds)
