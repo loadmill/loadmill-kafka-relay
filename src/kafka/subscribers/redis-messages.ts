@@ -12,11 +12,11 @@ import { toTopicMessagesKey } from './redis-keys';
 const REDIS_SCAN_BATCH_SIZE = 100;
 
 /**
- * Redis list simulates a Kafka topic.
- * LRANGE returns (oldest → newest);
- * Use negative indices (LRANGE key -N -1) to start from tail.
+ * Redis sorted set stores topic messages ordered by timestamp.
+ * ZRANGE returns (oldest → newest);
+ * Use negative indices (ZRANGE key -N -1) to start from tail.
  * Scan in reverse to get (newest → oldest).
- * Avoid duplicates / overlap across batches in case list is modified during scan.
+ * Avoid duplicates / overlap across batches in case set is modified during scan.
  */
 export const getMessagesFromRedis = async (
   topic: string,
@@ -47,7 +47,7 @@ const _fetchTailMessages = async (
   messagesKey: string,
   maxMessagesToFetch: number,
 ): Promise<ConsumedMessage[]> => {
-  const serializedTail = await getRedisClient().lRange(messagesKey, -maxMessagesToFetch, -1);
+  const serializedTail = await getRedisClient().zRange(messagesKey, -maxMessagesToFetch, -1);
   return serializedTail.map(_parseSerializedMessage);
 };
 
@@ -64,7 +64,7 @@ const _fetchBatchFromRedis = async (
   offset: number,
 ): Promise<string[]> => {
   const { start, stop } = _calculateBatchRange(offset);
-  return await getRedisClient().lRange(messagesKey, start, stop);
+  return await getRedisClient().zRange(messagesKey, start, stop);
 };
 
 const _calculateBatchRange = (offset: number) => {

@@ -18,6 +18,7 @@ import {
 } from './constants';
 import {
   fromKafkaToConsumedMessage,
+  getMessagesFromRedis,
   normalizeConsumedMessageValue,
 } from './messages';
 import {

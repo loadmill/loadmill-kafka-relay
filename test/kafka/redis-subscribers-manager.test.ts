@@ -1,4 +1,4 @@
-import { getMessagesFromRedis } from '../../src/kafka/subscribers/messages';
+import { getMessagesFromRedis } from '../../src/kafka/subscribers/redis-messages';
 import { RedisSubscribersManager } from '../../src/kafka/subscribers/redis-subscribers-manager';
 import { ensureTopicConsumerRunning } from '../../src/kafka/subscribers/topic-consumers-manager';
 import {
@@ -8,8 +8,8 @@ import {
 
 jest.mock('../../src/redis/redis-client');
 jest.mock('../../src/multi-instance', () => ({ thisRelayInstanceId: 'test-instance' }));
-jest.mock('../../src/kafka/subscribers/messages', () => ({
-  ...jest.requireActual('../../src/kafka/subscribers/messages'),
+jest.mock('../../src/kafka/subscribers/redis-messages', () => ({
+  ...jest.requireActual('../../src/kafka/subscribers/redis-messages'),
   getMessagesFromRedis: jest.fn(),
 }));
 jest.mock('../../src/kafka/subscribers/topic-consumers-manager', () => ({
