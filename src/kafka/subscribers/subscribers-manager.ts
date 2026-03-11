@@ -1,7 +1,5 @@
 import log from '../../log';
 import {
-  ConsumedMessage,
-  ConsumeQueryOptions,
   SubscribeOptions,
   SubscribeParams,
 } from '../../types';
@@ -51,18 +49,6 @@ export class SubscribersManager {
 
   isSubscriberExists = (id: string): boolean | Promise<boolean> =>{
     return !!this.subscribers[id];
-  };
-
-  getMessages = (
-    subscriberId: string,
-    options?: ConsumeQueryOptions,
-  ): ConsumedMessage[] | Promise<ConsumedMessage[]> => {
-    void options;
-    const subscriber = this.get(subscriberId);
-    if (subscriber) {
-      return subscriber.getMessages();
-    }
-    return [];
   };
 
   protected startDeletingExpiredSubscribers = (): void => {

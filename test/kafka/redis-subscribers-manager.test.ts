@@ -139,6 +139,25 @@ describe('RedisSubscribersManager', () => {
     expect(messages.map(m => Number(m.timestamp))).toEqual([100, 200, 300]);
   });
 
+  it('getMessages passes options to getMessagesFromRedis for local subscribers', async () => {
+    const { redisClient, redisSubscriberClient } = createRedisMocks();
+    mockGetRedisClient.mockReturnValue(redisClient as never);
+    mockGetRedisSubscriberClient.mockReturnValue(redisSubscriberClient as never);
+    mockGetMessagesFromRedis.mockResolvedValue([
+      { timestamp: '200', value: 'order-ABC-match' } as never,
+    ]);
+    const manager = new RedisSubscribersManager();
+    const subscriber = await manager.add(
+      { brokers: ['kafka:9092'], topic: 'test-topic' },
+      { connectionTimeout: undefined, sasl: undefined, ssl: false },
+    );
+
+    const options = { multiple: 1, valueRegex: /order-ABC/ };
+    await manager.getMessages(subscriber.id, options);
+
+    expect(mockGetMessagesFromRedis).toHaveBeenCalledWith('test-topic', options);
+  });
+
   it('takeOverSubscribers calls subscribe on each taken-over subscriber', async () => {
     const { redisClient, redisSubscriberClient } = createRedisMocks();
     const multiDel = jest.fn().mockReturnThis();
