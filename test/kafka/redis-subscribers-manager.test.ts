@@ -107,7 +107,7 @@ describe('RedisSubscribersManager', () => {
       { connectionTimeout: undefined, sasl: undefined, ssl: false },
     );
 
-    const messages = await manager.getMessages(subscriber.id);
+    const messages = await manager.getMessages(subscriber.id, Number.MAX_SAFE_INTEGER, 0);
 
     expect(mockEnsureTopicConsumerRunning).toHaveBeenCalled();
     expect(messages.map(m => Number(m.timestamp))).toEqual([100, 200, 300]);
@@ -133,7 +133,7 @@ describe('RedisSubscribersManager', () => {
     redisClient.get.mockResolvedValueOnce(serializedSubscriber);
     const manager = new RedisSubscribersManager();
 
-    const messages = await manager.getMessages('sub-remote');
+    const messages = await manager.getMessages('sub-remote', Number.MAX_SAFE_INTEGER, 0);
 
     expect(mockEnsureTopicConsumerRunning).toHaveBeenCalled();
     expect(messages.map(m => Number(m.timestamp))).toEqual([100, 200, 300]);

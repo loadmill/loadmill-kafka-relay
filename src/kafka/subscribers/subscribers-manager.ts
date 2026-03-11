@@ -49,10 +49,10 @@ export class SubscribersManager {
     return !!this.subscribers[id];
   };
 
-  getMessages = (subscriberId: string): ConsumedMessage[] | Promise<ConsumedMessage[]> => {
+  getMessages = (subscriberId: string, limit: number, offset: number): ConsumedMessage[] | Promise<ConsumedMessage[]> => {
     const subscriber = this.get(subscriberId);
     if (subscriber) {
-      return subscriber.getMessages();
+      return subscriber.getMessages(limit, offset);
     }
     return [];
   };
