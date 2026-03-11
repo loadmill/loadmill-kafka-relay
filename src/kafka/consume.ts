@@ -2,7 +2,6 @@ import isEmpty from 'lodash/isEmpty';
 
 import { TRUE_AS_STRING_VALUES } from '../constants';
 import { ClientError } from '../errors';
-import log from '../log';
 import { ConsumedMessage, ConsumeOptions, ConsumeParams } from '../types';
 
 import { getMessages } from './subscribers';
@@ -81,7 +80,7 @@ const scanForMatches = async (
   }
 
   const matches: ConsumedMessage[] = [];
-  const previousBatch = new Set<string>();
+  let previousBatch = new Set<string>();
   let offset = 0;
 
   while (matches.length < maxMessages) {
@@ -91,9 +90,11 @@ const scanForMatches = async (
     }
 
     // Scan batch from newest to oldest, skipping overlaps
+    const batchSerialized: string[] = [];
     for (let i = batch.length - 1; i >= 0 && matches.length < maxMessages; i--) {
       const message = batch[i];
       const serialized = JSON.stringify(message);
+      batchSerialized.push(serialized);
 
       if (previousBatch.has(serialized)) {
         continue; // overlap from async writes
@@ -110,8 +111,7 @@ const scanForMatches = async (
     }
 
     // Track this batch for overlap detection in next iteration
-    previousBatch.clear();
-    batch.forEach(m => previousBatch.add(JSON.stringify(m)));
+    previousBatch = new Set(batchSerialized);
 
     offset += batch.length;
   }
@@ -122,7 +122,7 @@ const scanForMatches = async (
   }
 };
 
-const isMessageMatchesConsumeFilters = (
+export const isMessageMatchesConsumeFilters = (
   message: ConsumedMessage,
   { headerRegex, valueRegex }: FilterRegexOptions,
 ): boolean => {
@@ -130,24 +130,6 @@ const isMessageMatchesConsumeFilters = (
   const valueMatch = valueRegex?.test(valueAsString) ?? false;
   const headerMatch = headerRegex ? hasMatchingHeader(message.headers, headerRegex) : false;
   return valueMatch || headerMatch;
-};
-
-export const filterMessages = (
-  messages: ConsumedMessage[],
-  headerValueRegexFilter?: string,
-  regexFilter?: string,
-): ConsumedMessage[] => {
-  log.debug({ messages, regexFilter }, 'Filtering messages by regex');
-
-  const valueRegex = regexFilter ? new RegExp(regexFilter) : null;
-  const headerRegex = headerValueRegexFilter ? new RegExp(headerValueRegexFilter) : null;
-
-  return messages.filter((message) => {
-    const valueAsString = String(message.value || '');
-    const valueMatch = valueRegex?.test(valueAsString);
-    const headerMatch = headerRegex ? hasMatchingHeader(message.headers, headerRegex) : false;
-    return valueMatch || headerMatch;
-  });
 };
 
 const hasMatchingHeader = (headers: { [key: string]: string | undefined } | undefined, regex: RegExp): boolean => {
