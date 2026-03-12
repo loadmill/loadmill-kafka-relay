@@ -173,7 +173,7 @@ export class RedisSubscribersManager extends SubscribersManager {
     return allActiveSubscribers.includes(id);
   };
 
-  getMessages = async (subscriberId: string): Promise<ConsumedMessage[]> => {
+  getMessages = async (subscriberId: string, limit: number, offset: number): Promise<ConsumedMessage[]> => {
     const localSubscriber = this.subscribers[subscriberId];
     if (localSubscriber) {
       await ensureTopicConsumerRunning(
@@ -184,7 +184,7 @@ export class RedisSubscribersManager extends SubscribersManager {
           ssl: localSubscriber.kafkaConfig.ssl,
         },
       );
-      return await getMessagesFromRedis(localSubscriber.topic);
+      return await getMessagesFromRedis(localSubscriber.topic, limit, offset);
     }
 
     const redisSubscriber = await this.getSubscriberFromRedis(subscriberId);
@@ -198,7 +198,7 @@ export class RedisSubscribersManager extends SubscribersManager {
       { brokers, topic },
       { connectionTimeout, sasl, ssl },
     );
-    return await getMessagesFromRedis(topic);
+    return await getMessagesFromRedis(topic, limit, offset);
   };
 
   private getSubscriberFromRedis = async (subscriberId: string): Promise<SerializedRedisSubscriber | undefined> => {

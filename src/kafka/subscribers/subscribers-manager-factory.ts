@@ -1,6 +1,5 @@
 import { isMultiInstance } from '../../multi-instance/is-multi-instance';
 
-import { RedisSubscribersManager } from './redis-subscribers-manager';
 import { SubscribersManager } from './subscribers-manager';
 
 class SubscriberManagerSingletonFactory {
@@ -8,9 +7,13 @@ class SubscriberManagerSingletonFactory {
 
   static getInstance(): SubscribersManager {
     if (!this.instance) {
-      this.instance = isMultiInstance() ?
-        new RedisSubscribersManager() :
-        new SubscribersManager();
+      if (isMultiInstance()) {
+        // Lazy require to avoid opening a Redis connection in single-instance mode.
+        const { RedisSubscribersManager } = require('./redis-subscribers-manager') as typeof import('./redis-subscribers-manager');
+        this.instance = new RedisSubscribersManager();
+      } else {
+        this.instance = new SubscribersManager();
+      }
     }
     return this.instance;
   }

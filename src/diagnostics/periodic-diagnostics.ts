@@ -34,8 +34,8 @@ export const initPeriodicDiagnosticsLogger = (): void => {
           },
           'PERIODIC DIAGNOSTICS',
         );
-      } catch (_) {
-        // ignore
+      } catch (error) {
+        log.warn({ error }, 'Periodic diagnostics failed');
       }
     })();
   }, 60 * 1000);
@@ -64,7 +64,7 @@ const _getRawTopicsUsage = async (subscribers: RedisSubscribers): Promise<_RawTo
       const messagesKey = toTopicMessagesKey(topic);
 
       const [numberOfMessages, redisBytes] = await Promise.all([
-        redisClient.lLen(messagesKey),
+        redisClient.zCard(messagesKey),
         redisClient.sendCommand(['MEMORY', 'USAGE', messagesKey]),
       ]);
 

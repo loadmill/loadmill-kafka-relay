@@ -35,7 +35,7 @@ const getSubscriptions = async (): Promise<DebugSubscribers> => {
 const toShallowSubscribers = async (subscribers: Subscribers): Promise<DebugSubscribers> => {
   const shallowSubscribers: (ShallowSubscribers | ShallowRedisSubscribers) = {};
   const subscriberIds = Object.keys(subscribers);
-  const messagesResults = await Promise.all(subscriberIds.map(id => subscribers[id].getMessages()));
+  const messagesResults = await Promise.all(subscriberIds.map(id => subscribers[id].getMessages(1, 0))); // Fetch only the latest message per subscriber
   subscriberIds.forEach((id, index) => {
     const { timeOfSubscription, topic } = subscribers[id];
     const messages = messagesResults[index];
