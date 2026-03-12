@@ -16,11 +16,8 @@ type FilterRegexOptions = {
   valueRegex: RegExp | null;
 };
 
-type ConsumeQueryOptions = FilterRegexOptions & {
+type ConsumeFilterOptions = FilterRegexOptions & {
   multiple?: number;
-};
-
-type MessageOrTimeoutOptions = ConsumeQueryOptions & {
   timeout?: number;
 };
 
@@ -30,7 +27,7 @@ export const consume = async (
 ): Promise<ConsumedMessage[]> => {
   const headerRegex = headerValueRegexFilter ? new RegExp(headerValueRegexFilter) : null;
   const valueRegex = regexFilter ? new RegExp(regexFilter) : null;
-  const options: MessageOrTimeoutOptions = { headerRegex, multiple, timeout, valueRegex };
+  const options: ConsumeFilterOptions = { headerRegex, multiple, timeout, valueRegex };
 
   const res = await getMessagesOrTimeout(id, options);
   if (!res) {
@@ -45,7 +42,7 @@ export const consume = async (
 
 const getMessagesOrTimeout = async (
   subscriberId: string,
-  options: MessageOrTimeoutOptions,
+  options: ConsumeFilterOptions,
 ): Promise<ConsumedMessage[] | undefined> => {
   const { timeout } = options;
   const startTime = Date.now();
@@ -61,11 +58,13 @@ const getMessagesOrTimeout = async (
 };
 
 /**
- * Scans messages in batches for matches to the provided filters, starting from the newest messages (in tail).
+ * Scans messages in batches for matches to the provided filters, starting from the newest messages.
+ * Overlap detection handles the case where a concurrent write causes the same message to appear
+ * in two consecutive batches.
  */
 const scanForMatches = async (
   subscriberId: string,
-  options: ConsumeQueryOptions,
+  options: ConsumeFilterOptions,
 ): Promise<ConsumedMessage[] | undefined> => {
   const { headerRegex, valueRegex, multiple } = options;
   const maxMessages = Math.max(1, Number(multiple) || 1);
@@ -90,11 +89,11 @@ const scanForMatches = async (
     }
 
     // Scan batch from newest to oldest, skipping overlaps
-    const batchSerialized: string[] = [];
+    const batchSerialized = new Set<string>();
     for (let i = batch.length - 1; i >= 0 && matches.length < maxMessages; i--) {
       const message = batch[i];
       const serialized = JSON.stringify(message);
-      batchSerialized.push(serialized);
+      batchSerialized.add(serialized);
 
       if (previousBatch.has(serialized)) {
         continue; // overlap from async writes
@@ -111,7 +110,7 @@ const scanForMatches = async (
     }
 
     // Track this batch for overlap detection in next iteration
-    previousBatch = new Set(batchSerialized);
+    previousBatch = batchSerialized;
 
     offset += batch.length;
   }

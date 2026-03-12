@@ -8,6 +8,8 @@ import {
 
 jest.mock('../../src/redis/redis-client');
 jest.mock('../../src/multi-instance', () => ({ thisRelayInstanceId: 'test-instance' }));
+
+const NO_LIMIT = Number.MAX_SAFE_INTEGER;
 jest.mock('../../src/kafka/subscribers/messages', () => ({
   ...jest.requireActual('../../src/kafka/subscribers/messages'),
   getMessagesFromRedis: jest.fn(),
@@ -107,7 +109,7 @@ describe('RedisSubscribersManager', () => {
       { connectionTimeout: undefined, sasl: undefined, ssl: false },
     );
 
-    const messages = await manager.getMessages(subscriber.id, Number.MAX_SAFE_INTEGER, 0);
+    const messages = await manager.getMessages(subscriber.id, NO_LIMIT, 0);
 
     expect(mockEnsureTopicConsumerRunning).toHaveBeenCalled();
     expect(messages.map(m => Number(m.timestamp))).toEqual([100, 200, 300]);
@@ -133,7 +135,7 @@ describe('RedisSubscribersManager', () => {
     redisClient.get.mockResolvedValueOnce(serializedSubscriber);
     const manager = new RedisSubscribersManager();
 
-    const messages = await manager.getMessages('sub-remote', Number.MAX_SAFE_INTEGER, 0);
+    const messages = await manager.getMessages('sub-remote', NO_LIMIT, 0);
 
     expect(mockEnsureTopicConsumerRunning).toHaveBeenCalled();
     expect(messages.map(m => Number(m.timestamp))).toEqual([100, 200, 300]);

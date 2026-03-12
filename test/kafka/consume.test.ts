@@ -15,21 +15,6 @@ const makeMsg = (value: string, headers?: Record<string, string>): ConsumedMessa
   value,
 });
 
-/**
- * Sets up getMessages mock to properly simulate the paginated interface.
- * Returns messages sliced from the tail respecting limit and offset.
- */
-const setupMessagesMock = (allMessages: ConsumedMessage[]): void => {
-  mockGetMessages.mockImplementation((_id: string, limit: number, offset: number) => {
-    const end = allMessages.length - offset;
-    const start = Math.max(0, end - limit);
-    if (end <= 0) {
-      return Promise.resolve([]);
-    }
-    return Promise.resolve(allMessages.slice(start, end));
-  });
-};
-
 // --- consume behavior tests ---
 
 describe('consume', () => {
@@ -42,8 +27,7 @@ describe('consume', () => {
   });
 
   it('returns the single latest message when no filter is applied', async () => {
-    const messages = [makeMsg('msg1'), makeMsg('msg2'), makeMsg('msg3')];
-    setupMessagesMock(messages);
+    mockGetMessages.mockResolvedValue([makeMsg('msg3')]);
 
     const result = await consume({ id: 'sub1' }, { text: 'true' });
 
@@ -51,8 +35,7 @@ describe('consume', () => {
   });
 
   it('returns the N latest messages when multiple is set and no filter', async () => {
-    const messages = [makeMsg('msg1'), makeMsg('msg2'), makeMsg('msg3')];
-    setupMessagesMock(messages);
+    mockGetMessages.mockResolvedValue([makeMsg('msg2'), makeMsg('msg3')]);
 
     const result = await consume({ id: 'sub1' }, { multiple: 2, text: 'true' });
 

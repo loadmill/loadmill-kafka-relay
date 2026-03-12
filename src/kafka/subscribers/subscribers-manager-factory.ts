@@ -8,6 +8,7 @@ class SubscriberManagerSingletonFactory {
   static getInstance(): SubscribersManager {
     if (!this.instance) {
       if (isMultiInstance()) {
+        // Lazy require to avoid opening a Redis connection in single-instance mode.
         const { RedisSubscribersManager } = require('./redis-subscribers-manager') as typeof import('./redis-subscribers-manager');
         this.instance = new RedisSubscribersManager();
       } else {
