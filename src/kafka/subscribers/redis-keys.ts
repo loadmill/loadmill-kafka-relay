@@ -18,5 +18,8 @@ export const toTopicMessagesKey = (topic: string): string =>
 export const toTopicLeaderKey = (topic: string): string =>
   `${toTopicStateRedisNamespace(topic)}:leader`;
 
+export const toTopicLeaderReadyKey = (topic: string): string =>
+  `${toTopicStateRedisNamespace(topic)}:leader-ready`;
+
 export const toTopicPartitionOffsetWatermarksKey = (topic: string): string =>
   `${toTopicStateRedisNamespace(topic)}:partition-offset-watermarks`;

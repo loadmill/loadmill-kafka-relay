@@ -26,7 +26,7 @@ describe('periodic topic diagnostics', () => {
 
     const result = await getTopicsUsageForLog(subscribers);
 
-    const messagesKey = 'kafka-relay:topics:v2:orders%3Acreated%2Ftest%20topic:messages';
+    const messagesKey = 'kafka-relay:topics:v3:orders%3Acreated%2Ftest%20topic:messages';
     expect(zCard).toHaveBeenCalledTimes(1);
     expect(zCard).toHaveBeenCalledWith(messagesKey);
     expect(lLen).not.toHaveBeenCalled();

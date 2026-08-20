@@ -2,7 +2,7 @@ import { createHash } from 'crypto';
 
 import { kafkaRelayPrefixKey } from '../../multi-instance/redis-keys';
 
-export const TOPIC_SHARED_STATE_VERSION = 'v2';
+export const TOPIC_SHARED_STATE_VERSION = 'v3';
 
 export const toTopicStateRedisNamespace = (topic: string): string =>
   `${kafkaRelayPrefixKey}:topics:${TOPIC_SHARED_STATE_VERSION}:${encodeURIComponent(topic)}`;
