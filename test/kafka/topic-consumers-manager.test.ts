@@ -58,7 +58,7 @@ describe('ensureTopicConsumerRunning', () => {
 
       await ensureTopicConsumerRunning({ brokers: ['kafka:9092'], topic }, subscribeOptions);
 
-      expect(redisClient.zCard).toHaveBeenCalledWith(`kafka-relay:topics:${topic}:messages`);
+      expect(redisClient.zCard).toHaveBeenCalledWith(`kafka-relay:topics:v2:${topic}:messages`);
       expect(mockReseekToLatestMessages).toHaveBeenCalledTimes(1);
     });
 

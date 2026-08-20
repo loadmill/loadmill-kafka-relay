@@ -1,6 +1,8 @@
 import { thisRelayInstanceId } from '../../multi-instance';
 import { kafkaRelayPrefixKey } from '../../multi-instance/redis-keys';
 
+import { toTopicStateRedisNamespace } from './topic-state-namespace';
+
 export const toSubscriberKey = (
   subscriberId: string,
   relayInstanceId: string = thisRelayInstanceId,
@@ -10,13 +12,11 @@ export const toSubscriberKey = (
 export const toMessagesKey = (subscriberId: string): string =>
   `${kafkaRelayPrefixKey}:subscribers:${subscriberId}:messages`;
 
-const encodeKeyPart = (value: string): string => encodeURIComponent(value);
-
 export const toTopicMessagesKey = (topic: string): string =>
-  `${kafkaRelayPrefixKey}:topics:${encodeKeyPart(topic)}:messages`;
+  `${toTopicStateRedisNamespace(topic)}:messages`;
 
 export const toTopicLeaderKey = (topic: string): string =>
-  `${kafkaRelayPrefixKey}:topics:${encodeKeyPart(topic)}:leader`;
+  `${toTopicStateRedisNamespace(topic)}:leader`;
 
 export const toTopicPartitionOffsetWatermarksKey = (topic: string): string =>
-  `${kafkaRelayPrefixKey}:topics:${encodeKeyPart(topic)}:partition-offset-watermarks`;
+  `${toTopicStateRedisNamespace(topic)}:partition-offset-watermarks`;
