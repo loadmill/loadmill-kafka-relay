@@ -2,7 +2,13 @@ import { randomUUID } from 'crypto';
 
 import { createClient } from 'redis';
 
+import {
+  toTopicMessagesKey,
+  toTopicPartitionOffsetWatermarksKey,
+} from '../../src/kafka/subscribers/redis-keys';
 import { appendTopicMessageWithDedupe } from '../../src/kafka/subscribers/redis-topic-dedupe';
+
+jest.mock('../../src/multi-instance', () => ({ thisRelayInstanceId: 'test-instance' }));
 
 type StoredMessage = {
   offset: string;
@@ -21,12 +27,6 @@ describeRedisIntegration('redis topic dedupe integration', () => {
   let isRedisAvailable = true;
 
   jest.setTimeout(20000);
-
-  const toTopicMessagesKey = (topic: string): string =>
-    `kafka-relay:topics:${encodeURIComponent(topic)}:messages`;
-
-  const toTopicPartitionOffsetWatermarksKey = (topic: string): string =>
-    `kafka-relay:topics:${encodeURIComponent(topic)}:partition-offset-watermarks`;
 
   beforeAll(async () => {
     try {

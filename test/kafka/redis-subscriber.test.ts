@@ -1,3 +1,7 @@
+import {
+  TOPIC_CONSUMER_ASSIGNMENT_POLL_INTERVAL_MS,
+  TOPIC_CONSUMER_ASSIGNMENT_TIMEOUT_MS,
+} from '../../src/kafka/subscribers/constants';
 import { RedisSubscriber } from '../../src/kafka/subscribers/redis-subscriber';
 import { ensureTopicConsumerRunning } from '../../src/kafka/subscribers/topic-consumers-manager';
 import { getRedisClient } from '../../src/redis/redis-client';
@@ -14,7 +18,7 @@ const mockEnsureTopicConsumerRunning = ensureTopicConsumerRunning as jest.Mocked
 
 describe('RedisSubscriber.reseekToLatestMessages', () => {
   const subscribeParams = { brokers: ['kafka:9092'], topic: 'test-topic' };
-  const watermarkKey = 'kafka-relay:topics:test-topic:partition-offset-watermarks';
+  const watermarkKey = 'kafka-relay:topics:v3:test-topic:partition-offset-watermarks';
 
   const makeConsumer = () => ({ seek: jest.fn() });
 
@@ -135,6 +139,7 @@ describe('RedisSubscriber.subscribeAsTopicConsumer', () => {
   it('computes seek offset from high/low', async () => {
     const callOrder: string[] = [];
     const consumer = {
+      assignment: jest.fn().mockReturnValue([{ partition: 0, topic: 'test-topic' }]),
       connect: jest.fn().mockImplementation(async () => {
         callOrder.push('connect');
       }),
@@ -170,6 +175,7 @@ describe('RedisSubscriber.subscribeAsTopicConsumer', () => {
   it('clamps to low when topic has fewer than 5000 messages', async () => {
     const callOrder: string[] = [];
     const consumer = {
+      assignment: jest.fn().mockReturnValue([{ partition: 0, topic: 'test-topic' }]),
       connect: jest.fn().mockImplementation(async () => {
         callOrder.push('connect');
       }),
@@ -199,6 +205,87 @@ describe('RedisSubscriber.subscribeAsTopicConsumer', () => {
 
     expect(consumer.seek).toHaveBeenCalledWith({ offset: '0', partition: 0, topic: 'test-topic' });
     expect(callOrder).toEqual(['connect', 'fetchTopicOffsets', 'subscribe', 'run', 'seek']);
+  });
+
+  it('disconnects the admin client when fetching topic offsets fails', async () => {
+    const consumer = {
+      assignment: jest.fn(),
+      connect: jest.fn().mockResolvedValue(undefined),
+    };
+    const { _admin: admin, admin: kafkaAdmin } = makeKafka([]);
+    const fetchError = new Error('offset lookup failed');
+    admin.fetchTopicOffsets.mockRejectedValue(fetchError);
+    const subscriber = createSubscriber();
+    subscriber.consumer = consumer as never;
+    subscriber.kafka = { admin: kafkaAdmin } as never;
+
+    await expect(subscriber.subscribeAsTopicConsumer()).rejects.toThrow(fetchError);
+
+    expect(admin.disconnect).toHaveBeenCalledTimes(1);
+  });
+
+  it('waits for the expected topic partition assignment', async () => {
+    jest.useFakeTimers();
+    try {
+      const consumer = {
+        assignment: jest.fn()
+          .mockReturnValueOnce([{ partition: 0, topic: 'test-topic' }])
+          .mockReturnValueOnce([{ partition: 0, topic: 'test-topic' }])
+          .mockReturnValue([
+            { partition: 0, topic: 'test-topic' },
+            { partition: 1, topic: 'test-topic' },
+          ]),
+        connect: jest.fn().mockResolvedValue(undefined),
+        run: jest.fn().mockResolvedValue(undefined),
+        seek: jest.fn(),
+        subscribe: jest.fn().mockResolvedValue(undefined),
+      };
+      const { admin: kafkaAdmin } = makeKafka([
+        { high: '10', low: '0', offset: '0', partition: 0 },
+        { high: '10', low: '0', offset: '0', partition: 1 },
+      ]);
+      const subscriber = createSubscriber();
+      subscriber.consumer = consumer as never;
+      subscriber.kafka = { admin: kafkaAdmin } as never;
+
+      const subscribing = subscriber.subscribeAsTopicConsumer();
+      await jest.advanceTimersByTimeAsync(TOPIC_CONSUMER_ASSIGNMENT_POLL_INTERVAL_MS * 2);
+      await subscribing;
+
+      expect(consumer.assignment).toHaveBeenCalledTimes(3);
+      expect(subscriber.isTopicConsumerCaptureReady()).toBe(true);
+    } finally {
+      jest.clearAllTimers();
+      jest.useRealTimers();
+    }
+  });
+
+  it('rejects startup when partition assignment never becomes ready', async () => {
+    jest.useFakeTimers();
+    try {
+      const consumer = {
+        assignment: jest.fn().mockReturnValue([]),
+        connect: jest.fn().mockResolvedValue(undefined),
+        run: jest.fn().mockResolvedValue(undefined),
+        seek: jest.fn(),
+        subscribe: jest.fn().mockResolvedValue(undefined),
+      };
+      const { admin: kafkaAdmin } = makeKafka([
+        { high: '10', low: '0', offset: '0', partition: 0 },
+      ]);
+      const subscriber = createSubscriber();
+      subscriber.consumer = consumer as never;
+      subscriber.kafka = { admin: kafkaAdmin } as never;
+      const subscribing = expect(subscriber.subscribeAsTopicConsumer()).rejects.toThrow(
+        'Timed out waiting for Kafka partition assignment for test-topic',
+      );
+
+      await jest.advanceTimersByTimeAsync(TOPIC_CONSUMER_ASSIGNMENT_TIMEOUT_MS);
+      await subscribing;
+    } finally {
+      jest.clearAllTimers();
+      jest.useRealTimers();
+    }
   });
 });
 
