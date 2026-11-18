@@ -7,6 +7,7 @@ import {
   SUBSCRIBER_EXPIRY_CHECK_INTERVAL_MS,
 } from './constants';
 import { Subscriber, Subscribers } from './subscriber';
+import { SkippedMessage } from './undecodable-messages';
 
 export class SubscribersManager {
   protected readonly subscribers: Subscribers = {};
@@ -53,6 +54,14 @@ export class SubscribersManager {
     const subscriber = this.get(subscriberId);
     if (subscriber) {
       return subscriber.getMessages();
+    }
+    return [];
+  };
+
+  getSkippedMessages = (subscriberId: string): SkippedMessage[] | Promise<SkippedMessage[]> => {
+    const subscriber = this.get(subscriberId);
+    if (subscriber) {
+      return subscriber.getSkippedMessages();
     }
     return [];
   };

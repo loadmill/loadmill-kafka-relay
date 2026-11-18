@@ -5,7 +5,8 @@ import { ClientError } from '../errors';
 import log from '../log';
 import { ConsumedMessage, ConsumeOptions, ConsumeParams } from '../types';
 
-import { getMessages } from './subscribers';
+import { getMessages, getSkippedMessages } from './subscribers';
+import { describeSkippedMessages } from './subscribers/undecodable-messages';
 
 const SECOND_MS = 1000;
 const MAX_QUERY_TIME_MS = 25 * SECOND_MS;
@@ -25,13 +26,21 @@ export const consume = async (
     },
   );
   if (!res) {
-    let msg = 'No message found. ';
-    msg += regexFilter ?
-      'Maybe your regex filter is too restrictive?' :
-      'Maybe the topic you provided when subscribing is either empty or not spelled correctly?';
-    throw new ClientError(404, msg);
+    throw new ClientError(404, await noMessageFoundReason(id, regexFilter));
   }
   return handleTextOption(res, text);
+};
+
+// When undecodable messages were skipped, they are the likely reason, so name them instead of
+// pointing the test author at their filter.
+export const noMessageFoundReason = async (id: string, regexFilter?: string): Promise<string> => {
+  const skipped = describeSkippedMessages(await getSkippedMessages(id));
+  if (skipped) {
+    return `No message found. ${skipped}`;
+  }
+  return 'No message found. ' + (regexFilter ?
+    'Maybe your regex filter is too restrictive?' :
+    'Maybe the topic you provided when subscribing is either empty or not spelled correctly?');
 };
 
 const getMessagesOrTimeout = async (

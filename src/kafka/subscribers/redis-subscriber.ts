@@ -11,6 +11,7 @@ import { getRedisClient } from '../../redis/redis-client';
 import { RedisClient } from '../../redis/types';
 import { ConsumedMessage, SubscribeOptions, SubscribeParams } from '../../types';
 import { KafkaType } from '../../types/kafkajs-confluent';
+import { UndecodableMessageError } from '../schema-registry';
 
 import {
   MAX_TOPIC_MESSAGES_LENGTH,
@@ -31,6 +32,13 @@ import { appendTopicMessageWithDedupe } from './redis-topic-dedupe';
 import { ShallowSubscriber, Subscriber } from './subscriber';
 import { ensureTopicConsumerRunning } from './topic-consumers-manager';
 import { toTopicGroupId } from './topic-utils';
+import {
+  getSkippedMessagesFromRedis,
+  logSkippedMessage,
+  recordSkippedMessageInRedis,
+  SkippedMessage,
+  toSkippedMessage,
+} from './undecodable-messages';
 
 export type RedisSubscriberOptions = {
   asTopicConsumer?: boolean;
@@ -55,8 +63,20 @@ export class RedisSubscriber extends Subscriber {
     debugParams && (this.instanceId = debugParams.instanceId);
   }
 
-  async addMessage({ message, partition }: EachMessagePayload): Promise<void> {
-    const consumedMessage = await fromKafkaToConsumedMessage(message);
+  async addMessage(payload: EachMessagePayload): Promise<void> {
+    const { message, partition } = payload;
+    let consumedMessage: ConsumedMessage;
+    try {
+      consumedMessage = await fromKafkaToConsumedMessage(message);
+    } catch (error) {
+      if (!(error instanceof UndecodableMessageError)) {
+        throw error;
+      }
+      const skipped = toSkippedMessage(payload, error);
+      logSkippedMessage(this.topic, skipped);
+      await recordSkippedMessageInRedis(this.redisClient, this.topic, skipped);
+      return;
+    }
 
     // Normalize the value to ensure Avro union types are type mapped
     const normalizedValue = normalizeConsumedMessageValue(consumedMessage.value);
@@ -132,6 +152,10 @@ export class RedisSubscriber extends Subscriber {
 
   async getMessages(): Promise<ConsumedMessage[]> {
     return await getMessagesFromRedis(this.topic);
+  }
+
+  async getSkippedMessages(): Promise<SkippedMessage[]> {
+    return await getSkippedMessagesFromRedis(this.topic);
   }
 
   isTopicConsumerCaptureReady(): boolean {

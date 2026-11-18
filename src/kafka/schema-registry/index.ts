@@ -70,8 +70,13 @@ export const setEncodeSchema = async (encodeSchemaOptions: EncodeSchemaOptions):
 };
 
 export const decode = async (encodedValue: Buffer): Promise<string | undefined> => {
+  const schemaId = readSchemaId(encodedValue);
+  const knownMissing = schemaId !== undefined ? missingSchemaIds.get(schemaId) : undefined;
+  if (knownMissing && knownMissing.expiresAt > Date.now()) {
+    throw new UndecodableMessageError(schemaId, knownMissing.reason);
+  }
   try {
-    return await schemaRegistry?.decode(encodedValue);
+    return await decodeConfirmingSchemaNotFound(encodedValue);
   } catch (error) {
     if (
       error instanceof ConfluentSchemaRegistryArgumentError &&
@@ -82,10 +87,61 @@ export const decode = async (encodedValue: Buffer): Promise<string | undefined> 
     ) {
       log.debug({ encodedValue: encodedValue.toString() }, 'Error decoding value, it probably wasnt encoded with schema.');
       log.debug(error);
+    } else if (isSchemaNotFound(error)) {
+      const reason = (error as Error).message;
+      if (schemaId !== undefined) {
+        missingSchemaIds.set(schemaId, { expiresAt: Date.now() + MISSING_SCHEMA_CACHE_MS, reason });
+      }
+      throw new UndecodableMessageError(schemaId, reason);
     } else {
       throw error;
     }
   }
+};
+
+// A registry replica can answer 404 for a schema registered a moment ago on the leader, so a 404 is
+// re-checked before the message is given up on. Once confirmed, the ID is remembered for a minute so
+// a topic full of such messages is skipped without waiting on every one.
+export const SCHEMA_NOT_FOUND_RECHECK_DELAYS_MS = [500, 1000];
+const MISSING_SCHEMA_CACHE_MS = 60 * 1000;
+const missingSchemaIds = new Map<number, { expiresAt: number; reason: string }>();
+
+export const clearMissingSchemaIds = (): void => missingSchemaIds.clear();
+
+const decodeConfirmingSchemaNotFound = async (encodedValue: Buffer): Promise<string | undefined> => {
+  for (const delayMs of [...SCHEMA_NOT_FOUND_RECHECK_DELAYS_MS, undefined]) {
+    try {
+      return await schemaRegistry?.decode(encodedValue);
+    } catch (error) {
+      if (delayMs === undefined || !isSchemaNotFound(error)) {
+        throw error;
+      }
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+  }
+};
+
+// Thrown when a message references a schema ID the registry does not have. Retrying cannot fix
+// this, so consumers skip the message instead of re-reading it forever. Every other decode error
+// (registry unreachable, 5xx, auth) is rethrown unchanged and still retried.
+export class UndecodableMessageError extends Error {
+  constructor(readonly schemaId: number | undefined, readonly reason: string) {
+    super(reason);
+    this.name = 'UndecodableMessageError';
+  }
+}
+
+const isSchemaNotFound = (error: unknown): boolean =>
+  error instanceof Error &&
+  error.name === 'ResponseError' &&
+  (error as Error & { status?: number }).status === 404;
+
+// Confluent wire format: magic byte 0, then the schema ID as a 4-byte big-endian integer.
+export const readSchemaId = (encodedValue: Buffer | null | undefined): number | undefined => {
+  if (!encodedValue || encodedValue.length < 5 || encodedValue.readUInt8(0) !== 0) {
+    return undefined;
+  }
+  return encodedValue.readInt32BE(1);
 };
 
 export const encode = async (value: unknown, options?: EncodeSchemaOptions): Promise<Buffer | undefined> => {

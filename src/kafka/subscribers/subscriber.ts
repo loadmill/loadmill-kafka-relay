@@ -12,8 +12,10 @@ import log from '../../log';
 import { ConsumedMessage, SubscribeOptions, SubscribeParams } from '../../types';
 import { Kafka, KafkaType } from '../../types/kafkajs-confluent';
 import { prepareBrokers } from '../brokers';
+import { UndecodableMessageError } from '../schema-registry';
 
 import { fromKafkaToConsumedMessage } from './messages';
+import { logSkippedMessage, SkippedMessage, toSkippedMessage } from './undecodable-messages';
 
 export class Subscriber {
   consumer?: Consumer;
@@ -21,6 +23,7 @@ export class Subscriber {
   kafka?: KafkaType;
   kafkaConfig: { brokers: string[] } & Pick<KafkaConfig, 'connectionTimeout' | 'sasl' | 'ssl'>;
   protected messages: ConsumedMessage[] = [];
+  protected skippedMessages: SkippedMessage[] = [];
   timeOfSubscription: number;
   topic: string;
 
@@ -55,12 +58,25 @@ export class Subscriber {
     this.consumer = this.kafka.consumer({ kafkaJS: { fromBeginning: false, groupId } });
   }
 
-  async addMessage({ message }: EachMessagePayload): Promise<void> {
-    this.messages.push(await fromKafkaToConsumedMessage(message));
+  async addMessage(payload: EachMessagePayload): Promise<void> {
+    try {
+      this.messages.push(await fromKafkaToConsumedMessage(payload.message));
+    } catch (error) {
+      if (!(error instanceof UndecodableMessageError)) {
+        throw error;
+      }
+      const skipped = toSkippedMessage(payload, error);
+      logSkippedMessage(this.topic, skipped);
+      this.skippedMessages.push(skipped);
+    }
   }
 
   async getMessages(): Promise<ConsumedMessage[]> {
     return this.messages;
+  }
+
+  async getSkippedMessages(): Promise<SkippedMessage[]> {
+    return this.skippedMessages;
   }
 
   async subscribe(timestamp?: number): Promise<void> {

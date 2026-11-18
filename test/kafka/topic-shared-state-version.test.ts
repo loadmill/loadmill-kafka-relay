@@ -5,6 +5,7 @@ import {
   toTopicLeaderReadyKey,
   toTopicMessagesKey,
   toTopicPartitionOffsetWatermarksKey,
+  toTopicSkippedMessagesKey,
 } from '../../src/kafka/subscribers/redis-keys';
 import {
   TOPIC_SHARED_STATE_VERSION,
@@ -31,6 +32,7 @@ describe('topic shared state protocol namespace', () => {
     expect(toTopicPartitionOffsetWatermarksKey(topic)).toBe(
       `${currentRedisNamespace}:partition-offset-watermarks`,
     );
+    expect(toTopicSkippedMessagesKey(topic)).toBe(`${currentRedisNamespace}:skipped-messages`);
   });
 
   it('keeps current Redis keys disjoint from preceding protocol versions', () => {
@@ -40,6 +42,7 @@ describe('topic shared state protocol namespace', () => {
         `${namespace}:leader`,
         `${namespace}:leader-ready`,
         `${namespace}:partition-offset-watermarks`,
+        `${namespace}:skipped-messages`,
       ]),
     );
     const currentKeys = [
@@ -47,6 +50,7 @@ describe('topic shared state protocol namespace', () => {
       toTopicLeaderKey(topic),
       toTopicLeaderReadyKey(topic),
       toTopicPartitionOffsetWatermarksKey(topic),
+      toTopicSkippedMessagesKey(topic),
     ];
 
     expect(currentKeys.every(key => !precedingKeys.has(key))).toBe(true);
