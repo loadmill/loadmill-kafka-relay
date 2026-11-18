@@ -14,6 +14,8 @@ import { KafkaType } from '../../types/kafkajs-confluent';
 
 import {
   MAX_TOPIC_MESSAGES_LENGTH,
+  TOPIC_CONSUMER_ASSIGNMENT_POLL_INTERVAL_MS,
+  TOPIC_CONSUMER_ASSIGNMENT_TIMEOUT_MS,
   TOPIC_MESSAGES_TTL_SECONDS,
 } from './constants';
 import {
@@ -37,6 +39,7 @@ export type RedisSubscriberOptions = {
 };
 
 export class RedisSubscriber extends Subscriber {
+  private expectedTopicPartitions: number[] = [];
   private redisClient: RedisClient = getRedisClient();
   readonly instanceId: string = thisRelayInstanceId;
 
@@ -103,6 +106,7 @@ export class RedisSubscriber extends Subscriber {
 
     await this.consumer.connect();
     const partitions = await getSeekOffsets(this.kafka, this.topic);
+    this.expectedTopicPartitions = partitions.map(({ partition }) => partition);
     await this.consumer.subscribe({ topic: this.topic });
     await this.consumer.run({
       eachMessage: async (payload) => {
@@ -110,6 +114,7 @@ export class RedisSubscriber extends Subscriber {
       },
     });
     await seekToPartitions(this.consumer, partitions, this.topic);
+    await waitForTopicAssignments(this, this.topic);
   }
 
   // In multi-instance mode we keep *one* Kafka consumer per topic (per cluster) and store messages once.
@@ -127,6 +132,19 @@ export class RedisSubscriber extends Subscriber {
 
   async getMessages(): Promise<ConsumedMessage[]> {
     return await getMessagesFromRedis(this.topic);
+  }
+
+  isTopicConsumerCaptureReady(): boolean {
+    if (!this.consumer || this.expectedTopicPartitions.length === 0) {
+      return false;
+    }
+
+    const assignedPartitions = new Set(
+      this.consumer.assignment()
+        .filter(({ topic }) => topic === this.topic)
+        .map(({ partition }) => partition),
+    );
+    return this.expectedTopicPartitions.every((partition) => assignedPartitions.has(partition));
   }
 }
 
@@ -151,12 +169,15 @@ const getSeekOffsets = async (
 ): Promise<PartitionOffset[]> => {
   const admin = kafka.admin();
   await admin.connect();
-  const offsets = await admin.fetchTopicOffsets(topic);
-  await admin.disconnect();
-  return offsets.map(({ partition, high, low }) => ({
-    offset: String(Math.max(Number(low), Number(high) - MAX_TOPIC_MESSAGES_LENGTH)),
-    partition,
-  }));
+  try {
+    const offsets = await admin.fetchTopicOffsets(topic);
+    return offsets.map(({ partition, high, low }) => ({
+      offset: String(Math.max(Number(low), Number(high) - MAX_TOPIC_MESSAGES_LENGTH)),
+      partition,
+    }));
+  } finally {
+    await admin.disconnect();
+  }
 };
 
 const seekToPartitions = async (consumer: Consumer, partitions: PartitionOffset[], topic: string) => {
@@ -165,4 +186,30 @@ const seekToPartitions = async (consumer: Consumer, partitions: PartitionOffset[
       consumer.seek({ offset, partition, topic }),
     ),
   );
+};
+
+const waitForTopicAssignments = async (
+  subscriber: RedisSubscriber,
+  topic: string,
+): Promise<void> => {
+  const deadline = Date.now() + TOPIC_CONSUMER_ASSIGNMENT_TIMEOUT_MS;
+  let lastAssignmentError: unknown;
+
+  while (Date.now() < deadline) {
+    try {
+      if (subscriber.isTopicConsumerCaptureReady()) {
+        return;
+      }
+    } catch (error) {
+      lastAssignmentError = error;
+    }
+
+    await new Promise((resolve) => setTimeout(
+      resolve,
+      Math.min(TOPIC_CONSUMER_ASSIGNMENT_POLL_INTERVAL_MS, deadline - Date.now()),
+    ));
+  }
+
+  const errorDetail = lastAssignmentError instanceof Error ? `: ${lastAssignmentError.message}` : '';
+  throw new Error(`Timed out waiting for Kafka partition assignment for ${topic}${errorDetail}`);
 };
