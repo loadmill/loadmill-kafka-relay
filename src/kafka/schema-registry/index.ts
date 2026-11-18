@@ -51,6 +51,8 @@ export const initSchemaRegistry = async ({ url, auth, encode }: RegistryOptions)
         logicalTypes: { decimal: AvroDecimal },
       } },
     );
+    // IDs missing from the previous registry may exist in this one.
+    clearMissingSchemaIds();
     log.info(message);
     latestUrl = url;
   }
@@ -72,9 +74,10 @@ export const setEncodeSchema = async (encodeSchemaOptions: EncodeSchemaOptions):
 export const decode = async (encodedValue: Buffer): Promise<string | undefined> => {
   const schemaId = readSchemaId(encodedValue);
   const knownMissing = schemaId !== undefined ? missingSchemaIds.get(schemaId) : undefined;
-  if (knownMissing && knownMissing.expiresAt > Date.now()) {
+  if (knownMissing && knownMissing.registry === schemaRegistry && knownMissing.expiresAt > Date.now()) {
     throw new UndecodableMessageError(schemaId, knownMissing.reason);
   }
+  const registry = schemaRegistry;
   try {
     return await decodeConfirmingSchemaNotFound(encodedValue);
   } catch (error) {
@@ -90,7 +93,7 @@ export const decode = async (encodedValue: Buffer): Promise<string | undefined> 
     } else if (isSchemaNotFound(error)) {
       const reason = (error as Error).message;
       if (schemaId !== undefined) {
-        missingSchemaIds.set(schemaId, { expiresAt: Date.now() + MISSING_SCHEMA_CACHE_MS, reason });
+        missingSchemaIds.set(schemaId, { expiresAt: Date.now() + MISSING_SCHEMA_CACHE_MS, reason, registry });
       }
       throw new UndecodableMessageError(schemaId, reason);
     } else {
@@ -104,7 +107,8 @@ export const decode = async (encodedValue: Buffer): Promise<string | undefined> 
 // a topic full of such messages is skipped without waiting on every one.
 export const SCHEMA_NOT_FOUND_RECHECK_DELAYS_MS = [500, 1000];
 const MISSING_SCHEMA_CACHE_MS = 60 * 1000;
-const missingSchemaIds = new Map<number, { expiresAt: number; reason: string }>();
+// Scoped to the registry client that confirmed the miss: one swapped in by POST /registry starts clean.
+const missingSchemaIds = new Map<number, { expiresAt: number; reason: string; registry: SchemaRegistry }>();
 
 export const clearMissingSchemaIds = (): void => missingSchemaIds.clear();
 

@@ -111,6 +111,27 @@ describe('decode', () => {
     expect(mockRegistryDecode).toHaveBeenCalledTimes(1);
   });
 
+  it('asks a newly configured registry about an ID the previous one did not have', async () => {
+    mockRegistryDecode.mockRejectedValue(notFound());
+    await decodeSettled(wireFormat(31394));
+    await initSchemaRegistry({ url: 'http://other-registry.test' });
+    mockRegistryDecode.mockReset().mockResolvedValue({ orderId: 'in-the-new-registry' });
+
+    await expect(decode(wireFormat(31394))).resolves.toEqual({ orderId: 'in-the-new-registry' });
+    expect(mockRegistryDecode).toHaveBeenCalledTimes(1);
+    await initSchemaRegistry({ url: 'http://registry.test' });
+  });
+
+  it('keeps the missing-schema cache when the same registry URL is set again', async () => {
+    mockRegistryDecode.mockRejectedValue(notFound());
+    await decodeSettled(wireFormat(31394));
+    await initSchemaRegistry({ url: 'http://registry.test' });
+    mockRegistryDecode.mockClear();
+
+    await expect(decode(wireFormat(31394))).rejects.toBeInstanceOf(UndecodableMessageError);
+    expect(mockRegistryDecode).not.toHaveBeenCalled();
+  });
+
   it('passes non-Buffer header values through without throwing', async () => {
     mockRegistryDecode.mockResolvedValue(undefined);
 
