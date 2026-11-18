@@ -137,8 +137,9 @@ const isSchemaNotFound = (error: unknown): boolean =>
   (error as Error & { status?: number }).status === 404;
 
 // Confluent wire format: magic byte 0, then the schema ID as a 4-byte big-endian integer.
-export const readSchemaId = (encodedValue: Buffer | null | undefined): number | undefined => {
-  if (!encodedValue || encodedValue.length < 5 || encodedValue.readUInt8(0) !== 0) {
+// Header values can be strings or arrays (repeated header keys), so only a Buffer can carry an ID.
+export const readSchemaId = (encodedValue: unknown): number | undefined => {
+  if (!Buffer.isBuffer(encodedValue) || encodedValue.length < 5 || encodedValue.readUInt8(0) !== 0) {
     return undefined;
   }
   return encodedValue.readInt32BE(1);

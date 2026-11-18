@@ -36,6 +36,9 @@ describe('readSchemaId', () => {
     expect(readSchemaId(Buffer.from('plain text'))).toBeUndefined();
     expect(readSchemaId(Buffer.from([0, 1]))).toBeUndefined();
     expect(readSchemaId(null)).toBeUndefined();
+    // header values that are not Buffers: a string and a repeated header (array) of 5+ entries
+    expect(readSchemaId('a string header value')).toBeUndefined();
+    expect(readSchemaId(['a', 'b', 'c', 'd', 'e'])).toBeUndefined();
   });
 });
 
@@ -106,6 +109,13 @@ describe('decode', () => {
 
     await expect(decode(wireFormat(30505))).rejects.toBe(registryError);
     expect(mockRegistryDecode).toHaveBeenCalledTimes(1);
+  });
+
+  it('passes non-Buffer header values through without throwing', async () => {
+    mockRegistryDecode.mockResolvedValue(undefined);
+
+    await expect(decode(['a', 'b', 'c', 'd', 'e'] as unknown as Buffer)).resolves.toBeUndefined();
+    await expect(decode('plain header' as unknown as Buffer)).resolves.toBeUndefined();
   });
 
   it('returns the decoded value when the schema exists', async () => {
