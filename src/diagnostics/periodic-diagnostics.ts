@@ -28,7 +28,7 @@ export const initPeriodicDiagnosticsLogger = (): void => {
               endpoint: 'periodic_diagnostics',
               memory: getMemoryUsageStats(),
               pid: process.pid,
-              topics: await _getTopicsUsageForLog(subscribers),
+              topics: await getTopicsUsageForLog(subscribers),
               uptimeSec: process.uptime(),
             },
           },
@@ -43,7 +43,7 @@ export const initPeriodicDiagnosticsLogger = (): void => {
   timer.unref();
 };
 
-const _getTopicsUsageForLog = async (subscribers: RedisSubscribers): Promise<_TopicDiagnosticsLog[]> => {
+export const getTopicsUsageForLog = async (subscribers: RedisSubscribers): Promise<_TopicDiagnosticsLog[]> => {
   const rawTopicsUsage: _RawTopicsUsage = await _getRawTopicsUsage(subscribers);
   return _mapToTopicDiagnosticsLog(rawTopicsUsage);
 };
@@ -64,7 +64,7 @@ const _getRawTopicsUsage = async (subscribers: RedisSubscribers): Promise<_RawTo
       const messagesKey = toTopicMessagesKey(topic);
 
       const [numberOfMessages, redisBytes] = await Promise.all([
-        redisClient.lLen(messagesKey),
+        redisClient.zCard(messagesKey),
         redisClient.sendCommand(['MEMORY', 'USAGE', messagesKey]),
       ]);
 

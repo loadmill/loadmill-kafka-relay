@@ -14,7 +14,7 @@ const mockEnsureTopicConsumerRunning = ensureTopicConsumerRunning as jest.Mocked
 
 describe('RedisSubscriber.reseekToLatestMessages', () => {
   const subscribeParams = { brokers: ['kafka:9092'], topic: 'test-topic' };
-  const watermarkKey = 'kafka-relay:topics:test-topic:partition-offset-watermarks';
+  const watermarkKey = 'kafka-relay:topics:v2:test-topic:partition-offset-watermarks';
 
   const makeConsumer = () => ({ seek: jest.fn() });
 
