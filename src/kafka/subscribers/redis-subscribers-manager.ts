@@ -22,6 +22,7 @@ import { RedisSubscriber, RedisSubscribers } from './redis-subscriber';
 import { SerializedRedisSubscriber } from './serialized-subscriber';
 import { SubscribersManager } from './subscribers-manager';
 import { ensureTopicConsumerRunning } from './topic-consumers-manager';
+import { getSkippedMessagesFromRedis, SkippedMessage } from './undecodable-messages';
 
 /**
  * Manages Kafka subscribers using Redis as a data store.
@@ -199,6 +200,12 @@ export class RedisSubscribersManager extends SubscribersManager {
       { connectionTimeout, sasl, ssl },
     );
     return await getMessagesFromRedis(topic);
+  };
+
+  // The skipped messages live per topic, like the messages, so any instance can answer for any subscriber.
+  getSkippedMessages = async (subscriberId: string): Promise<SkippedMessage[]> => {
+    const topic = this.subscribers[subscriberId]?.topic ?? (await this.getSubscriberFromRedis(subscriberId))?.topic;
+    return topic ? await getSkippedMessagesFromRedis(topic) : [];
   };
 
   private getSubscriberFromRedis = async (subscriberId: string): Promise<SerializedRedisSubscriber | undefined> => {

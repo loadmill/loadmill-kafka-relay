@@ -7,6 +7,7 @@ export const removeSubscriber = subscriptionsManager.delete;
 export const getActiveSubscribers = subscriptionsManager.getActiveSubscribers;
 export const isSubscriberExists = subscriptionsManager.isSubscriberExists;
 export const getMessages = subscriptionsManager.getMessages;
+export const getSkippedMessages = subscriptionsManager.getSkippedMessages;
 
 export const takeOverSubscribers = (subscriptionsManager as RedisSubscribersManager).takeOverSubscribers;
 export const getLocalSubscribers = (subscriptionsManager as RedisSubscribersManager).getLocalSubscribers;

@@ -23,3 +23,6 @@ export const toTopicLeaderReadyKey = (topic: string): string =>
 
 export const toTopicPartitionOffsetWatermarksKey = (topic: string): string =>
   `${toTopicStateRedisNamespace(topic)}:partition-offset-watermarks`;
+
+export const toTopicSkippedMessagesKey = (topic: string): string =>
+  `${toTopicStateRedisNamespace(topic)}:skipped-messages`;
