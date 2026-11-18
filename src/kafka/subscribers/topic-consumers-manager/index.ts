@@ -20,6 +20,12 @@ import {
 } from '../redis-keys';
 import { RedisSubscriber } from '../redis-subscriber';
 
+// Lease, fence and wait deadlines here are local elapsed-time arithmetic, so they use a monotonic
+// clock: a wall-clock step (e.g. an NTP correction) between capturing refreshStartedAt and arming
+// the fence would otherwise move the fence past the real lease expiry, and another instance could
+// take leadership while this one's Kafka consumer is still running.
+const monotonicNow = (): number => performance.now();
+
 type TopicEntry = {
   consumer?: RedisSubscriber;
   fenceTimeoutId?: NodeJS.Timeout;
@@ -128,7 +134,7 @@ const ensureTopicConsumerRunningTransition = async (
   { brokers, topic }: SubscribeParams,
   { connectionTimeout, sasl, ssl }: SubscribeOptions,
 ): Promise<void> => {
-  const readyDeadline = Date.now() + TOPIC_LEADER_READY_WAIT_TIMEOUT_MS;
+  const readyDeadline = monotonicNow() + TOPIC_LEADER_READY_WAIT_TIMEOUT_MS;
 
   while (true) {
     if (entry.stopPromise) {
@@ -206,13 +212,13 @@ const ensureTopicConsumerRunningTransition = async (
         }
       }
 
-      if (Date.now() >= readyDeadline) {
+      if (monotonicNow() >= readyDeadline) {
         throw new Error(`Timed out waiting for the local topic consumer to recover for ${topic}`);
       }
 
       await delay(Math.min(
         TOPIC_LEADER_READY_POLL_INTERVAL_MS,
-        readyDeadline - Date.now(),
+        readyDeadline - monotonicNow(),
       ));
       continue;
     }
@@ -232,13 +238,13 @@ const ensureTopicConsumerRunningTransition = async (
         return;
       }
 
-      if (Date.now() >= readyDeadline) {
+      if (monotonicNow() >= readyDeadline) {
         throw new Error(`Timed out waiting for a ready topic consumer for ${topic}`);
       }
 
       await delay(Math.min(
         TOPIC_LEADER_READY_POLL_INTERVAL_MS,
-        readyDeadline - Date.now(),
+        readyDeadline - monotonicNow(),
       ));
       continue;
     }
@@ -277,13 +283,13 @@ const ensureTopicConsumerRunningTransition = async (
       throw error;
     }
 
-    if (Date.now() >= readyDeadline) {
+    if (monotonicNow() >= readyDeadline) {
       throw new Error(`Timed out waiting for a ready topic consumer for ${topic}`);
     }
 
     await delay(Math.min(
       TOPIC_LEADER_READY_POLL_INTERVAL_MS,
-      readyDeadline - Date.now(),
+      readyDeadline - monotonicNow(),
     ));
   }
 };
@@ -305,7 +311,7 @@ const startTopicConsumerIfLeader = async (
     - TOPIC_LEADER_LOCK_FENCE_MARGIN_MS;
   if (
     !isCurrentStart(entry, startGeneration, topic)
-    || Date.now() >= acquisitionFenceDeadline
+    || monotonicNow() >= acquisitionFenceDeadline
   ) {
     await releaseTopicLeadershipWithinTimeout(
       topic,
@@ -361,7 +367,7 @@ const acquireLeadership = async (
 ): Promise<LeadershipAcquisition> => {
   const lockKey = toTopicLeaderKey(topic);
   const redisClient = getRedisClient();
-  const refreshStartedAt = Date.now();
+  const refreshStartedAt = monotonicNow();
   const result = await redisClient.set(lockKey, ownershipToken, {
     EX: TOPIC_LEADER_LOCK_TTL_SECONDS,
     NX: true,
@@ -404,7 +410,7 @@ const withDeadline = async <T>(
   timeoutError: Error,
 ): Promise<T> => withTimeout(
   promise,
-  Math.max(0, deadline - Date.now()),
+  Math.max(0, deadline - monotonicNow()),
   timeoutError,
 );
 
@@ -502,7 +508,7 @@ const armLeadershipFence = (
   const fenceDeadline = refreshStartedAt
     + TOPIC_LEADER_LOCK_TTL_SECONDS * 1000
     - TOPIC_LEADER_LOCK_FENCE_MARGIN_MS;
-  const fenceDelay = Math.max(0, fenceDeadline - Date.now());
+  const fenceDelay = Math.max(0, fenceDeadline - monotonicNow());
   entry.fenceTimeoutId = setTimeout(() => {
     entry.fenceTimeoutId = undefined;
     if (!isCurrentRenewal(entry, renewalGeneration, topic, ownershipToken)) {
@@ -526,7 +532,7 @@ const renewLeadershipOrStop = async (
 ): Promise<void> => {
   const captureReady = Boolean(entry.consumer && isCaptureReady(entry.consumer, topic));
   const redisClient = getRedisClient();
-  const refreshStartedAt = Date.now();
+  const refreshStartedAt = monotonicNow();
   const result = await redisClient.eval(RENEW_LEADERSHIP_SCRIPT, {
     arguments: [
       ownershipToken,

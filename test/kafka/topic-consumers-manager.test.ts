@@ -535,6 +535,54 @@ describe('ensureTopicConsumerRunning', () => {
     expect(disconnectedAt).toBeLessThan(leaseExpiry);
   });
 
+  it('fences on elapsed time when the wall clock steps back during a renewal', async () => {
+    const redis = createRedisState();
+    const topic = nextTopic();
+    const renewalResponseDelay = 1000;
+    const wallClockStepBack = 4000;
+    let disconnectedAt: number | undefined;
+    mockGetRedisClient.mockReturnValue(redis.client as never);
+    mockDisconnect.mockImplementationOnce(async () => {
+      disconnectedAt = performance.now();
+    });
+
+    await ensureTopicConsumerRunning({ brokers: ['kafka:9092'], topic }, subscribeOptions);
+    const startedAt = performance.now();
+    const evalImplementation = redis.client.eval.getMockImplementation();
+    let renewalCalls = 0;
+    redis.client.eval.mockImplementation((script, options) => {
+      if (!script.includes('redis.call(\'EXPIRE\', KEYS[1]')) {
+        return evalImplementation!(script, options);
+      }
+
+      renewalCalls += 1;
+      if (renewalCalls > 1) {
+        return new Promise(() => undefined);
+      }
+
+      // The renewal succeeds, but the host clock is stepped back while its reply is in flight.
+      const response = Promise.resolve(evalImplementation!(script, options));
+      return new Promise((resolve, reject) => {
+        setTimeout(() => {
+          jest.setSystemTime(Date.now() - wallClockStepBack);
+          void response.then(resolve, reject);
+        }, renewalResponseDelay);
+      });
+    });
+
+    await jest.advanceTimersByTimeAsync(
+      TOPIC_LEADER_LOCK_RENEW_INTERVAL_MS + renewalResponseDelay,
+    );
+    const leaseExpiry = startedAt
+      + TOPIC_LEADER_LOCK_RENEW_INTERVAL_MS
+      + TOPIC_LEADER_LOCK_TTL_SECONDS * 1000;
+    const fenceDeadline = leaseExpiry - TOPIC_LEADER_LOCK_FENCE_MARGIN_MS;
+    await jest.advanceTimersByTimeAsync(fenceDeadline - performance.now());
+
+    expect(disconnectedAt).toBe(fenceDeadline);
+    expect(disconnectedAt).toBeLessThan(leaseExpiry);
+  });
+
   it('fences locally when renewal and Redis cleanup reject', async () => {
     const redis = createRedisState();
     const topic = nextTopic();
