@@ -132,11 +132,14 @@ describe('decode', () => {
     expect(mockRegistryDecode).not.toHaveBeenCalled();
   });
 
-  it('passes non-Buffer header values through without throwing', async () => {
-    mockRegistryDecode.mockResolvedValue(undefined);
+  it('never sends a non-Buffer value to the registry', async () => {
+    // the registry rejects these with "Invalid buffer"; the caller falls back to their string form
+    mockRegistryDecode.mockRejectedValue(new Error('Invalid buffer'));
 
     await expect(decode(['a', 'b', 'c', 'd', 'e'] as unknown as Buffer)).resolves.toBeUndefined();
     await expect(decode('plain header' as unknown as Buffer)).resolves.toBeUndefined();
+    await expect(decode(null as unknown as Buffer)).resolves.toBeUndefined();
+    expect(mockRegistryDecode).not.toHaveBeenCalled();
   });
 
   it('returns the decoded value when the schema exists', async () => {

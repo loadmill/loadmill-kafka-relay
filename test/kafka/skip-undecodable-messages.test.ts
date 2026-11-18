@@ -77,6 +77,26 @@ describe('Subscriber.addMessage (single instance)', () => {
   });
 });
 
+describe('fromKafkaToConsumedMessage with real decode', () => {
+  it('keeps a message whose headers are a string and a repeated key (array)', async () => {
+    const realDecode = jest.requireActual('../../src/kafka/schema-registry').decode;
+    mockDecode.mockImplementation(realDecode);
+    const { fromKafkaToConsumedMessage } = jest.requireActual('../../src/kafka/subscribers/messages');
+    const message = {
+      headers: { 'x-repeated': ['one', 'two', 'three', 'four', 'five'], 'x-trace': 'trace-abcdef' },
+      key: null,
+      offset: '0',
+      timestamp: '1700000000000',
+      value: Buffer.from('plain value'),
+    };
+
+    const consumed = await fromKafkaToConsumedMessage(message);
+
+    expect(consumed.headers).toEqual({ 'x-repeated': 'one,two,three,four,five', 'x-trace': 'trace-abcdef' });
+    expect(consumed.value).toBe('plain value');
+  });
+});
+
 describe('RedisSubscriber.addMessage (multi instance)', () => {
   const subscriber = (redisClient: ReturnType<typeof makeRedisClient>) => {
     mockGetRedisClient.mockReturnValue(redisClient as never);

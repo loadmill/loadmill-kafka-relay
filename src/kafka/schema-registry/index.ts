@@ -72,6 +72,12 @@ export const setEncodeSchema = async (encodeSchemaOptions: EncodeSchemaOptions):
 };
 
 export const decode = async (encodedValue: Buffer): Promise<string | undefined> => {
+  // Only a Buffer can hold Avro: header values may be strings or arrays (a repeated header key), and
+  // the registry throws "Invalid buffer" for them, which made the consumer retry the message forever.
+  // Returning undefined lets the caller fall back to the value's string form.
+  if (!Buffer.isBuffer(encodedValue)) {
+    return undefined;
+  }
   const schemaId = readSchemaId(encodedValue);
   const knownMissing = schemaId !== undefined ? missingSchemaIds.get(schemaId) : undefined;
   if (knownMissing && knownMissing.registry === schemaRegistry && knownMissing.expiresAt > Date.now()) {
