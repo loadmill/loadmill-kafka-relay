@@ -34,8 +34,8 @@ export const initPeriodicDiagnosticsLogger = (): void => {
           },
           'PERIODIC DIAGNOSTICS',
         );
-      } catch (_) {
-        // ignore
+      } catch (error) {
+        log.warn({ error }, 'Periodic diagnostics failed');
       }
     })();
   }, 60 * 1000);

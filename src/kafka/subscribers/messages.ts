@@ -33,16 +33,21 @@ export const normalizeConsumedMessageValue = (value: ConsumedMessage['value']): 
     JSON.parse(value.toString());
 };
 
-export const getMessagesFromRedis = async (topic: string): Promise<ConsumedMessage[]> => {
-  const serializedMessages = await getRedisClient().zRange(toTopicMessagesKey(topic), 0, -1);
-  const messages = serializedMessages.map(
-    (serializedMessageObject: string) => {
-      const message = JSON.parse(serializedMessageObject) as ConsumedMessage;
-      if (message.value && typeof message.value !== 'string') {
-        message.value = JSON.stringify(message.value);
-      }
-      return message;
-    },
-  );
-  return messages;
+export const parseSerializedMessage = (serialized: string): ConsumedMessage => {
+  const message = JSON.parse(serialized) as ConsumedMessage;
+  if (message.value && typeof message.value !== 'string') {
+    message.value = JSON.stringify(message.value);
+  }
+  return message;
+};
+
+export const getMessagesFromRedis = async (
+  topic: string,
+  limit: number,
+  offset: number,
+): Promise<ConsumedMessage[]> => {
+  const start = -(offset + limit);
+  const stop = -(offset + 1);
+  const serialized = await getRedisClient().zRange(toTopicMessagesKey(topic), start, stop);
+  return serialized.map(parseSerializedMessage);
 };

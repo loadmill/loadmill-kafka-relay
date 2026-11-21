@@ -71,8 +71,13 @@ export class Subscriber {
     }
   }
 
-  async getMessages(): Promise<ConsumedMessage[]> {
-    return this.messages;
+  getMessages(limit: number, offset: number): ConsumedMessage[] | Promise<ConsumedMessage[]> {
+    const end = this.messages.length - offset;
+    const start = Math.max(0, end - limit);
+    if (end <= 0) {
+      return [];
+    }
+    return this.messages.slice(start, end);
   }
 
   async getSkippedMessages(): Promise<SkippedMessage[]> {
